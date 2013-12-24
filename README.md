@@ -79,7 +79,7 @@ Return: pointer to the found token, or NULL on failure.
 ## Licensing
 
 Frozen is released under [GNU GPL
-v.2 license](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
 Businesses have an option to get non-restrictive commercial license from
 [Cesanta Software](http://cesanta.com).
 
