@@ -30,11 +30,12 @@ struct json_token {
 
 #define JSON_TYPE_EOF     0   // End of parsed tokens marker
 #define JSON_TYPE_STRING  1
-#define JSON_TYPE_NUMERIC 2
+#define JSON_TYPE_NUMBER  2
 #define JSON_TYPE_OBJECT  3
 #define JSON_TYPE_TRUE    4
 #define JSON_TYPE_FALSE   5
 #define JSON_TYPE_NULL    6
+#define JSON_TYPE_ARRAY   7
 };
 
 // Error codes

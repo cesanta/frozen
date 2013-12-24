@@ -17,9 +17,6 @@
 
 #include "frozen.h"
 
-
-#include <stdio.h>  // TODO:remove this
-
 struct frozen {
   const char *end;
   const char *cur;
@@ -29,12 +26,15 @@ struct frozen {
 };
 
 static int parse_object(struct frozen *f);
+static int parse_value(struct frozen *f);
 
 #define EXPECT(cond, err_code) do { if (!(cond)) return (err_code); } while (0)
 #define TRY(expr) do { int n = expr; if (n < 0) return n; } while (0)
-#define SKIP_SPACES(f) do { skip_whitespaces(f); \
-  if (f->cur >= f->end) return JSON_STRING_INCOMPLETE; } while (0)
 #define END_OF_STRING (-1)
+
+static int left(const struct frozen *f) {
+  return f->end - f->cur;
+}
 
 static int is_space(int ch) {
   return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
@@ -75,38 +75,91 @@ static int get_escape_len(const char *s, int len) {
         is_hex_digit(s[2]) && is_hex_digit(s[3]) ? 4 : JSON_STRING_INVALID;
     case '"': case '\\': case '/': case 'b':
     case 'f': case 'n': case 'r': case 't':
-      return len < 2 ? JSON_STRING_INCOMPLETE : 2;
+      return len < 2 ? JSON_STRING_INCOMPLETE : 1;
     default:
       return JSON_STRING_INVALID;
   }
 }
 
+static int capture_ptr(struct frozen *f, const char *ptr, int type) {
+  if (f->tokens == 0 || f->max_tokens == 0) return 0;
+  if (f->num_tokens >= f->max_tokens) return JSON_TOKEN_ARRAY_TOO_SMALL;
+  f->tokens[f->num_tokens].ptr = ptr;
+  f->tokens[f->num_tokens].type = type;
+  f->num_tokens++;
+  return 0;
+}
+
+static int capture_len(struct frozen *f, int token_index, const char *ptr) {
+  if (f->tokens == 0 || f->max_tokens == 0) return 0;
+  EXPECT(token_index >= 0 && token_index < f->max_tokens, JSON_STRING_INVALID);
+  f->tokens[token_index].num_children = (f->num_tokens - 1) - token_index;
+  f->tokens[token_index].len = ptr - f->tokens[token_index].ptr;
+  return 0;
+}
+
 // identifier = letter { letter | digit | '_' }
 static int parse_identifier(struct frozen *f) {
-  //printf("%s 1 [%.*s]\n", __func__, (int) (f->end - f->cur), f->cur);
   EXPECT(is_alpha(cur(f)), JSON_STRING_INVALID);
+  TRY(capture_ptr(f, f->cur, JSON_TYPE_STRING));
   while (f->cur < f->end &&
          (*f->cur == '_' || is_alpha(*f->cur) || is_digit(*f->cur))) {
     f->cur++;
   }
+  capture_len(f, f->num_tokens - 1, f->cur);
   return 0;
 }
 
 // string = '"' { quoted_printable_chars } '"'
 static int parse_string(struct frozen *f) {
-  int n, ch;
+  int n, ch = 0;
   TRY(test_and_skip(f, '"'));
-  while (++f->cur < f->end) {
-    ch = cur(f);
-    EXPECT(ch > 32 && ch < 127, JSON_STRING_INVALID);
+  TRY(capture_ptr(f, f->cur, JSON_TYPE_STRING));
+  for (; f->cur < f->end; f->cur++) {
+    ch = * (unsigned char *) f->cur;
+    EXPECT(ch >= 32 && ch <= 127, JSON_STRING_INVALID);
     if (ch == '\\') {
-      EXPECT((n = get_escape_len(f->cur + 1, f->end - f->cur)) > 0, n);
+      EXPECT((n = get_escape_len(f->cur + 1, left(f))) > 0, n);
       f->cur += n;
     } else if (ch == '"') {
+      capture_len(f, f->num_tokens - 1, f->cur);
+      f->cur++;
       break;
     };
   }
+  return ch == '"' ? 0 : JSON_STRING_INCOMPLETE;
+}
+
+// number = [ '-' ] digit { digit }
+static int parse_number(struct frozen *f) {
+  int ch = cur(f);
+  TRY(capture_ptr(f, f->cur, JSON_TYPE_NUMBER));
+  if (ch == '-') f->cur++;
+  while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+  capture_len(f, f->num_tokens - 1, f->cur);
   return 0;
+}
+
+// array = '[' [ value { ',' value } ] ']'
+static int parse_array(struct frozen *f) {
+  int ind;
+  TRY(test_and_skip(f, '['));
+  TRY(capture_ptr(f, f->cur - 1, JSON_TYPE_ARRAY));
+  ind = f->num_tokens - 1;
+  while (cur(f) != ']') {
+    TRY(parse_value(f));
+    if (cur(f) == ',') f->cur++;
+  }
+  TRY(test_and_skip(f, ']'));
+  capture_len(f, ind, f->cur);
+  return 0;
+}
+
+static int compare(const struct frozen *f, const char *str, int len) {
+  int i = 0;
+  if (left(f) < len) return 0;
+  while (i < len && f->cur[i] == str[i]) i++;
+  return i == len ? 1 : 0;
 }
 
 // value = 'null' | 'true' | 'false' | number | string | array | object
@@ -116,6 +169,23 @@ static int parse_value(struct frozen *f) {
     TRY(parse_string(f));
   } else if (ch == '{') {
     TRY(parse_object(f));
+  } else if (ch == '[') {
+    TRY(parse_array(f));
+  } else if (ch == 'n' && compare(f, "null", 4)) {
+    TRY(capture_ptr(f, f->cur, JSON_TYPE_NULL));
+    f->cur += 4;
+    capture_len(f, f->num_tokens - 1, f->cur);
+  } else if (ch == 't' && compare(f, "true", 4)) {
+    TRY(capture_ptr(f, f->cur, JSON_TYPE_TRUE));
+    f->cur += 4;
+    capture_len(f, f->num_tokens - 1, f->cur);
+  } else if (ch == 'f' && compare(f, "false", 5)) {
+    TRY(capture_ptr(f, f->cur, JSON_TYPE_FALSE));
+    f->cur += 5;
+    capture_len(f, f->num_tokens - 1, f->cur);
+  } else if (is_digit(ch) ||
+             (ch == '-' && f->cur + 1 < f->end && is_digit(f->cur[1]))) {
+    TRY(parse_number(f));
   } else {
     return ch == END_OF_STRING ? JSON_STRING_INCOMPLETE : JSON_STRING_INVALID;
   }
@@ -125,7 +195,9 @@ static int parse_value(struct frozen *f) {
 // key = identifier | string
 static int parse_key(struct frozen *f) {
   int ch = cur(f);
-  //printf("%s 1 [%.*s]\n", __func__, (int) (f->end - f->cur), f->cur);
+#if 0
+  printf("%s 1 [%.*s]\n", __func__, (int) (f->end - f->cur), f->cur);
+#endif
   if (is_alpha(ch)) {
     TRY(parse_identifier(f));
   } else if (ch == '"') {
@@ -144,24 +216,29 @@ static int parse_pair(struct frozen *f) {
   return 0;
 }
 
-
 // object = '{' pair { ',' pair } '}'
 static int parse_object(struct frozen *f) {
+  int ind;
   TRY(test_and_skip(f, '{'));
+  TRY(capture_ptr(f, f->cur - 1, JSON_TYPE_OBJECT));
+  ind = f->num_tokens - 1;
   while (cur(f) != '}') {
     TRY(parse_pair(f));
+    if (cur(f) == ',') f->cur++;
   }
   TRY(test_and_skip(f, '}'));
+  capture_len(f, ind, f->cur);
   return 0;
 }
 
-// number = [ '-' ] digit { digit }
-// array = '[' [ value { ',' value } ] ']'
 // json = object
 int parse_json(const char *s, int s_len, struct json_token *arr, int arr_len) {
   struct frozen frozen = { s + s_len, s, arr, arr_len, 0 };
   if (s == 0 || s_len < 0) return JSON_STRING_INVALID;
   if (s_len == 0) return JSON_STRING_INCOMPLETE;
   TRY(parse_object(&frozen));
+  TRY(capture_ptr(&frozen, frozen.cur, JSON_TYPE_EOF));
+  capture_len(&frozen, frozen.num_tokens, frozen.cur);
+
   return frozen.cur - s;
 }
