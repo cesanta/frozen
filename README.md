@@ -62,3 +62,29 @@ Return: pointer to the found token, or NULL on failure.
 
 ## Example: parsing configuration
 
+    static const char *config_str = "{ listening_ports: [ 80, 443 ] } ";
+    struct json_token tokens[100];
+    int tokens_size = sizeof(tokens) / sizeof(tokens[0]);
+
+    ASSERT(parse_json(config_str, strlen(config_str), tokens, tokens_size) > 0);
+    ASSERT(tokens[0].type == JSON_TYPE_OBJECT);
+    ASSERT(tokens[1].type == JSON_TYPE_STRING);
+    ASSERT(tokens[2].type == JSON_TYPE_ARRAY);
+    ASSERT(tokens[3].type == JSON_TYPE_NUMBER);
+    ASSERT(tokens[4].type == JSON_TYPE_NUMBER);
+
+    ASSERT(find_json_token(tokens, "foo.bar") == NULL);
+    ASSERT(find_json_token(tokens, "listening_ports") == &tokens[2]);
+
+## Licensing
+
+Frozen is released under [GNU GPL
+v.2 license](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+Businesses have an option to get non-restrictive commercial license from
+[Cesanta Software](http://cesanta.com).
+
+[Super Light DNS Resolver](https://github.com/cesanta/sldr),
+[Super Light Regexp Library](https://github.com/cesanta/slre),
+[Mongoose web server](https://github.com/cesanta/mongoose)
+are other projects by Cesanta Software, developed with the same philosophy
+of functionality and simplicity.
