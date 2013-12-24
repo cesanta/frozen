@@ -125,34 +125,35 @@ static const char *test_errors(void) {
   ASSERT(cmp_token(&ar[21], "{}", JSON_TYPE_OBJECT));
   ASSERT(ar[22].type == JSON_TYPE_EOF);
 
-  ASSERT(ar[0].num_children == 21);
-  ASSERT(ar[1].num_children == 0);
-  ASSERT(ar[2].num_children == 0);
-  ASSERT(ar[3].num_children == 0);
-  ASSERT(ar[4].num_children == 0);
-  ASSERT(ar[5].num_children == 0);
-  ASSERT(ar[6].num_children == 0);
-  ASSERT(ar[7].num_children == 0);
-  ASSERT(ar[8].num_children == 0);
-  ASSERT(ar[9].num_children == 0);
-  ASSERT(ar[10].num_children == 0);
-  ASSERT(ar[11].num_children == 0);
-  ASSERT(ar[12].num_children == 3);
-  ASSERT(ar[13].num_children == 0);
-  ASSERT(ar[14].num_children == 0);
-  ASSERT(ar[15].num_children == 0);
-  ASSERT(ar[16].num_children == 0);
-  ASSERT(ar[17].num_children == 4);
-  ASSERT(ar[18].num_children == 0);
-  ASSERT(ar[19].num_children == 0);
-  ASSERT(ar[20].num_children == 0);
-  ASSERT(ar[21].num_children == 0);
+  return NULL;
+}
+
+static const char *test_config(void) {
+  static const char *config_str = "{ listening_ports: [ 80, 443 ] } ";
+  struct json_token tokens[100];
+  int tokens_size = sizeof(tokens) / sizeof(tokens[0]);
+
+  ASSERT(parse_json(config_str, strlen(config_str), tokens, tokens_size) > 0);
+  ASSERT(tokens[0].type == JSON_TYPE_OBJECT);
+  ASSERT(tokens[1].type == JSON_TYPE_STRING);
+  ASSERT(tokens[2].type == JSON_TYPE_ARRAY);
+  ASSERT(tokens[3].type == JSON_TYPE_NUMBER);
+  ASSERT(tokens[4].type == JSON_TYPE_NUMBER);
+
+  ASSERT(find_json_token(tokens, "foo.bar") == NULL);
+  ASSERT(find_json_token(tokens, "listening_ports") == &tokens[2]);
+#if 0
+  ASSERT(find_json_token(tokens, "listening_ports[0]") == &tokens[3]);
+  ASSERT(find_json_token(tokens, "listening_ports[1]") == &tokens[4]);
+  ASSERT(find_json_token(tokens, "listening_ports[3]") == NULL);
+#endif
 
   return NULL;
 }
 
 static const char *run_all_tests(void) {
   RUN_TEST(test_errors);
+  RUN_TEST(test_config);
   return NULL;
 }
 

@@ -25,7 +25,7 @@ extern "C" {
 struct json_token {
   const char *ptr;    // Points to the beginning of the token
   int len;            // Token length
-  int num_children;   // Number of children for array and objects
+  int num_desc;       // For arrays and object, total number of descendants
   int type;           // Type of the token, possible values below
 
 #define JSON_TYPE_EOF     0   // End of parsed tokens marker
@@ -44,13 +44,11 @@ struct json_token {
 #define JSON_TOKEN_ARRAY_TOO_SMALL    -3
 #define JSON_OUTPUT_BUFFER_TOO_SMALL  -4
 
-// Parse JSON string, store tokens in tokens_array. Last token has type
-// JSON_TYPE_EOF. Return offset in json string where parsing ended,
-// or negative error code on failure
 int parse_json(const char *json_string, int json_string_length,
                struct json_token *tokens_array, int size_of_tokens_array);
 
-int find_json_token(const struct json_token *toks, int num_toks, const char *p);
+const struct json_token *find_json_token(const struct json_token *toks,
+                                         const char *path);
 
 #ifdef __cplusplus
 }

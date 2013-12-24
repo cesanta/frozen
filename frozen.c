@@ -93,8 +93,8 @@ static int capture_ptr(struct frozen *f, const char *ptr, int type) {
 static int capture_len(struct frozen *f, int token_index, const char *ptr) {
   if (f->tokens == 0 || f->max_tokens == 0) return 0;
   EXPECT(token_index >= 0 && token_index < f->max_tokens, JSON_STRING_INVALID);
-  f->tokens[token_index].num_children = (f->num_tokens - 1) - token_index;
   f->tokens[token_index].len = ptr - f->tokens[token_index].ptr;
+  f->tokens[token_index].num_desc = (f->num_tokens - 1) - token_index;
   return 0;
 }
 
@@ -131,6 +131,7 @@ static int parse_string(struct frozen *f) {
 }
 
 // number = [ '-' ] digit { digit }
+// TODO(lsm): add support for floats
 static int parse_number(struct frozen *f) {
   int ch = cur(f);
   TRY(capture_ptr(f, f->cur, JSON_TYPE_NUMBER));
@@ -155,10 +156,9 @@ static int parse_array(struct frozen *f) {
   return 0;
 }
 
-static int compare(const struct frozen *f, const char *str, int len) {
+static int compare(const char *s, const char *str, int len) {
   int i = 0;
-  if (left(f) < len) return 0;
-  while (i < len && f->cur[i] == str[i]) i++;
+  while (i < len && s[i] == str[i]) i++;
   return i == len ? 1 : 0;
 }
 
@@ -171,15 +171,15 @@ static int parse_value(struct frozen *f) {
     TRY(parse_object(f));
   } else if (ch == '[') {
     TRY(parse_array(f));
-  } else if (ch == 'n' && compare(f, "null", 4)) {
+  } else if (ch == 'n' && left(f) > 4 && compare(f->cur, "null", 4)) {
     TRY(capture_ptr(f, f->cur, JSON_TYPE_NULL));
     f->cur += 4;
     capture_len(f, f->num_tokens - 1, f->cur);
-  } else if (ch == 't' && compare(f, "true", 4)) {
+  } else if (ch == 't' && left(f) > 4 && compare(f->cur, "true", 4)) {
     TRY(capture_ptr(f, f->cur, JSON_TYPE_TRUE));
     f->cur += 4;
     capture_len(f, f->num_tokens - 1, f->cur);
-  } else if (ch == 'f' && compare(f, "false", 5)) {
+  } else if (ch == 'f' && left(f) > 5 && compare(f->cur, "false", 5)) {
     TRY(capture_ptr(f, f->cur, JSON_TYPE_FALSE));
     f->cur += 5;
     capture_len(f, f->num_tokens - 1, f->cur);
@@ -241,4 +241,32 @@ int parse_json(const char *s, int s_len, struct json_token *arr, int arr_len) {
   capture_len(&frozen, frozen.num_tokens, frozen.cur);
 
   return frozen.cur - s;
+}
+
+static int path_part_len(const char *p) {
+  int i = 0;
+  while (p[i] != '\0' && p[i] != '.') i++;
+  return i;
+}
+
+const struct json_token *find_json_token(const struct json_token *toks,
+                                         const char *path) {
+  if (path == 0 && path[0] == '\0') return 0;
+  for (;;) {
+    int i, n = path_part_len(path);
+    if (n == 0) return 0;
+    if (toks++->type != JSON_TYPE_OBJECT) return 0;
+    for (i = 0; i < toks[-1].num_desc; i++, toks++) {
+      if (toks[i].type != JSON_TYPE_STRING) return 0;
+      if (toks[i].len == n && compare(path, toks[i].ptr, n)) return &toks[++i];
+      if (toks[i + 1].type == JSON_TYPE_ARRAY ||
+          toks[i + 1].type == JSON_TYPE_OBJECT) {
+        i += toks[i + 1].num_desc;
+      }
+    }
+    toks += i;
+    path += n;
+    if (path[0] == '.') path++;
+  }
+  return 0;
 }
