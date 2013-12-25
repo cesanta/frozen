@@ -28,7 +28,7 @@ all `parse_json` will store tokens in the `tokens_array`. Token with type
       int num_desc;       // For arrays and object, total number of descendants
       int type;           // Type of the token, possible values below
 
-    #define JSON_TYPE_EOF     0   // Not a real token. This is a marker
+    #define JSON_TYPE_EOF     0   // Not a real token, but end-of-tokens marker
     #define JSON_TYPE_STRING  1
     #define JSON_TYPE_NUMBER  2
     #define JSON_TYPE_OBJECT  3
@@ -51,7 +51,6 @@ returned, one of:
     #define JSON_STRING_INVALID           -1
     #define JSON_STRING_INCOMPLETE        -2
     #define JSON_TOKEN_ARRAY_TOO_SMALL    -3
-    #define JSON_OUTPUT_BUFFER_TOO_SMALL  -4
 
 <!-- -->
 
