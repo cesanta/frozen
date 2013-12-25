@@ -131,12 +131,27 @@ static int parse_string(struct frozen *f) {
 }
 
 // number = [ '-' ] digit { digit }
-// TODO(lsm): add support for floats
 static int parse_number(struct frozen *f) {
   int ch = cur(f);
   TRY(capture_ptr(f, f->cur, JSON_TYPE_NUMBER));
   if (ch == '-') f->cur++;
+  EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
+  EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
   while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+  if (f->cur < f->end && f->cur[0] == '.') {
+    f->cur++;
+    EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
+    EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
+    while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+  }
+  if (f->cur < f->end && (f->cur[0] == 'e' || f->cur[0] == 'E')) {
+    f->cur++;
+    EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
+    if ((f->cur[0] == '+' || f->cur[0] == '-')) f->cur++;
+    EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
+    EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
+    while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+  }
   capture_len(f, f->num_tokens - 1, f->cur);
   return 0;
 }

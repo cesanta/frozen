@@ -49,7 +49,8 @@ static const char *test_errors(void) {
   struct json_token ar[100];
   int size = ARRAY_SIZE(ar);
   static const char *invalid_tests[] = {
-    "1", "a:3", "\x01", "{:", " { 1", "{a:\"\n\"}",
+    "1", "a:3", "\x01", "{:", " { 1", "{a:\"\n\"}", "{a:1x}", "{a:1e}",
+    "{a:.1}", "{a:0.}", "{a:0.e}", "{a:0.e1}", "{a:0.1e}",
     NULL
   };
   static const char *incomplete_tests[] = {
@@ -60,7 +61,12 @@ static const char *test_errors(void) {
     { "{}", 2 },
     { " { } ", 4 },
     { "{a:1}", 5 },
-    { "{a:1}", 5 },
+    { "{a:1.23}", 8 },
+    { "{a:1e23}", 8 },
+    { "{a:1.23e2}", 10 },
+    { "{a:-123}", 8 },
+    { "{a:-1.3}", 8 },
+    { "{a:-1.3e-2}", 11},
     { "{a:\"\"}", 6 },
     { "{a:\" \\n\\t\\r\"}", 13 },
     { " {a:[1]} 123456", 8 },
