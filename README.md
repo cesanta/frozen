@@ -87,8 +87,8 @@ Return: pointer to the found token, or NULL on failure.
     ASSERT(find_json_token(tokens, "ports") == &tokens[2]);
     ASSERT(find_json_token(tokens, "ports[0]") == &tokens[3]);
     ASSERT(find_json_token(tokens, "ports[1]") == &tokens[4]);
-    ASSERT(find_json_token(tokens, "ports[3]") == NULL);
-    ASSERT(find_json_token(tokens, "foo.bar") == NULL);
+    ASSERT(find_json_token(tokens, "ports[3]") == NULL);  // Outside boundaries
+    ASSERT(find_json_token(tokens, "foo.bar") == NULL);   // Nonexistent
 
 # Licensing
 
