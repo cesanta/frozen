@@ -3,13 +3,14 @@ JSON parser for ISO C
 
 # Features
 
-   * Written in strict ISO C, portable to any environment
+   * Portable to any environment
    * Simple API: one function for parsing and one helper function
      for fetching parsed values
    * Supports superset of JSON: allows non-quoted identifiers as object keys
    * Very small footprint
    * No dependencies
    * Makes no memory allocations
+   * Code is strict ISO C and valid C++
 
 # API
 
@@ -74,11 +75,13 @@ Return: pointer to the found token, or NULL on failure.
 
     // Parse config string and make sure tokenization is correct
     ASSERT(parse_json(config_str, strlen(config_str), tokens, tokens_size) > 0);
-    ASSERT(tokens[0].type == JSON_TYPE_OBJECT);
-    ASSERT(tokens[1].type == JSON_TYPE_STRING);
-    ASSERT(tokens[2].type == JSON_TYPE_ARRAY);
-    ASSERT(tokens[3].type == JSON_TYPE_NUMBER);
+
+    ASSERT(tokens[0].type == JSON_TYPE_OBJECT);   // Tokens are populated
+    ASSERT(tokens[1].type == JSON_TYPE_STRING);   // in order of their
+    ASSERT(tokens[2].type == JSON_TYPE_ARRAY);    // appearance in the
+    ASSERT(tokens[3].type == JSON_TYPE_NUMBER);   // JSON string
     ASSERT(tokens[4].type == JSON_TYPE_NUMBER);
+    ASSERT(tokens[5].type == JSON_TYPE_EOF);      // Last token is always EOF
 
     // Fetch port values
     ASSERT(find_json_token(tokens, "ports") == &tokens[2]);
