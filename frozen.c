@@ -245,7 +245,7 @@ int parse_json(const char *s, int s_len, struct json_token *arr, int arr_len) {
 
 static int path_part_len(const char *p) {
   int i = 0;
-  while (p[i] != '\0' && p[i] != '.') i++;
+  while (p[i] != '\0' && p[i] != '[' && p[i] != '.') i++;
   return i;
 }
 
@@ -253,20 +253,37 @@ const struct json_token *find_json_token(const struct json_token *toks,
                                          const char *path) {
   if (path == 0 && path[0] == '\0') return 0;
   for (;;) {
-    int i, n = path_part_len(path);
-    if (n == 0) return 0;
-    if (toks++->type != JSON_TYPE_OBJECT) return 0;
-    for (i = 0; i < toks[-1].num_desc; i++, toks++) {
-      if (toks[i].type != JSON_TYPE_STRING) return 0;
-      if (toks[i].len == n && compare(path, toks[i].ptr, n)) return &toks[++i];
+    int i, ind2 = 0, ind = -1, skip = 2, n = path_part_len(path);
+    if (path[0] == '\0') return 0;
+    if (path[0] == '[') {
+      if (toks->type != JSON_TYPE_ARRAY || !is_digit(path[1])) return 0;
+      for (ind = 0, n = 1; path[n] != ']' && path[n] != '\0'; n++) {
+        if (!is_digit(path[n])) return 0;
+        ind *= 10;
+        ind += path[n] - '0';
+      }
+      if (path[n++] != ']') return 0;
+      skip = 1;  // In objects, we skip 2 elems while iterating, in arrays 1.
+    } else if (toks->type != JSON_TYPE_OBJECT) return 0;
+    toks++;
+    for (i = 0; i < toks[-1].num_desc; i += skip, ind2++) {
+      // ind == -1 indicated that we're iterating an array, not object
+      if (ind == -1 && toks[i].type != JSON_TYPE_STRING) return 0;
+      if (ind2 == ind ||
+          (ind == -1 && toks[i].len == n && compare(path, toks[i].ptr, n))) {
+        i += skip - 1;
+        break;
+      };
       if (toks[i + 1].type == JSON_TYPE_ARRAY ||
           toks[i + 1].type == JSON_TYPE_OBJECT) {
         i += toks[i + 1].num_desc;
       }
     }
-    toks += i;
+    if (i == toks[-1].num_desc) return 0;
     path += n;
     if (path[0] == '.') path++;
+    if (path[0] == '\0') return &toks[i];
+    toks += i;
   }
   return 0;
 }

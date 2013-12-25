@@ -72,7 +72,7 @@ static const char *test_errors(void) {
     { NULL, 0 }
   };
   const char *s1 = " { a: 1, b: \"hi there\", c: true, d: false, "
-    " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: {} } } ";
+    " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } } ";
   int i;
 
   ASSERT(parse_json(NULL, 0, NULL, 0) == JSON_STRING_INVALID);
@@ -100,7 +100,7 @@ static const char *test_errors(void) {
   ASSERT(parse_json(s1, strlen(s1), ar, 10) == JSON_TOKEN_ARRAY_TOO_SMALL);
   ASSERT(parse_json(s1, strlen(s1), ar, size) > 0);
   ASSERT(cmp_token(&ar[0], "{ a: 1, b: \"hi there\", c: true, d: false, "
-                   " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: {} } }",
+                   " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } }",
                    JSON_TYPE_OBJECT));
   ASSERT(cmp_token(&ar[1], "a", JSON_TYPE_STRING));
   ASSERT(cmp_token(&ar[2], "1", JSON_TYPE_NUMBER));
@@ -118,18 +118,26 @@ static const char *test_errors(void) {
   ASSERT(cmp_token(&ar[14], "-2", JSON_TYPE_NUMBER));
   ASSERT(cmp_token(&ar[15], "3", JSON_TYPE_NUMBER));
   ASSERT(cmp_token(&ar[16], "g", JSON_TYPE_STRING));
-  ASSERT(cmp_token(&ar[17], "{ \"1\": [], h: {} }" , JSON_TYPE_OBJECT));
+  ASSERT(cmp_token(&ar[17], "{ \"1\": [], h: [ 7 ] }" , JSON_TYPE_OBJECT));
   ASSERT(cmp_token(&ar[18], "1", JSON_TYPE_STRING));
   ASSERT(cmp_token(&ar[19], "[]", JSON_TYPE_ARRAY));
   ASSERT(cmp_token(&ar[20], "h", JSON_TYPE_STRING));
-  ASSERT(cmp_token(&ar[21], "{}", JSON_TYPE_OBJECT));
-  ASSERT(ar[22].type == JSON_TYPE_EOF);
+  ASSERT(cmp_token(&ar[21], "[ 7 ]", JSON_TYPE_ARRAY));
+  ASSERT(cmp_token(&ar[22], "7", JSON_TYPE_NUMBER));
+  ASSERT(ar[23].type == JSON_TYPE_EOF);
+
+  ASSERT(find_json_token(ar, "a") == &ar[2]);
+  ASSERT(find_json_token(ar, "f") == &ar[12]);
+  ASSERT(find_json_token(ar, "g.h") == &ar[21]);
+  ASSERT(find_json_token(ar, "g.h[0]") == &ar[22]);
+  ASSERT(find_json_token(ar, "g.h[1]") == NULL);
+  ASSERT(find_json_token(ar, "g.h1") == NULL);
 
   return NULL;
 }
 
 static const char *test_config(void) {
-  static const char *config_str = "{ listening_ports: [ 80, 443 ] } ";
+  static const char *config_str = "{ ports: [ 80, 443 ] } ";
   struct json_token tokens[100];
   int tokens_size = sizeof(tokens) / sizeof(tokens[0]);
 
@@ -139,14 +147,13 @@ static const char *test_config(void) {
   ASSERT(tokens[2].type == JSON_TYPE_ARRAY);
   ASSERT(tokens[3].type == JSON_TYPE_NUMBER);
   ASSERT(tokens[4].type == JSON_TYPE_NUMBER);
+  ASSERT(tokens[5].type == JSON_TYPE_EOF);
 
+  ASSERT(find_json_token(tokens, "ports") == &tokens[2]);
+  ASSERT(find_json_token(tokens, "ports[0]") == &tokens[3]);
+  ASSERT(find_json_token(tokens, "ports[1]") == &tokens[4]);
+  ASSERT(find_json_token(tokens, "ports[3]") == NULL);
   ASSERT(find_json_token(tokens, "foo.bar") == NULL);
-  ASSERT(find_json_token(tokens, "listening_ports") == &tokens[2]);
-#if 0
-  ASSERT(find_json_token(tokens, "listening_ports[0]") == &tokens[3]);
-  ASSERT(find_json_token(tokens, "listening_ports[1]") == &tokens[4]);
-  ASSERT(find_json_token(tokens, "listening_ports[3]") == NULL);
-#endif
 
   return NULL;
 }
