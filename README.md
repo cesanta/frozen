@@ -1,4 +1,4 @@
-JSON parser for ISO C
+JSON parser for C/C++
 ===========================================
 
 # Features
