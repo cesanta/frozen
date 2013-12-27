@@ -130,7 +130,7 @@ static int parse_string(struct frozen *f) {
   return ch == '"' ? 0 : JSON_STRING_INCOMPLETE;
 }
 
-// number = [ '-' ] digit { digit }
+// number = [ '-' ] digit+ [ '.' digit+ ] [ ['e'|'E'] ['+'|'-'] digit+ ]
 static int parse_number(struct frozen *f) {
   int ch = cur(f);
   TRY(capture_ptr(f, f->cur, JSON_TYPE_NUMBER));
