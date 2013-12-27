@@ -89,12 +89,12 @@ Return: pointer to the found token, or NULL on failure.
     ASSERT(find_json_token(tokens, "ports[3]") == NULL);  // Outside boundaries
     ASSERT(find_json_token(tokens, "foo.bar") == NULL);   // Nonexistent
 
-# Licensing
+# License
 
-Frozen is released under [GNU GPL
-v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
-Businesses have an option to get non-restrictive, royalty-free
-commercial license and professional support from
+Frozen is released under
+[GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+Businesses have an option to get non-restrictive, royalty-free commercial
+license and professional support from
 [Cesanta Software](http://cesanta.com).
 
 [Super Light DNS Resolver](https://github.com/cesanta/sldr),
