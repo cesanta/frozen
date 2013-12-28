@@ -17,8 +17,9 @@ JSON parser for C/C++
 
    1. Copy `frozen.c` and `frozen.h` to your project
    2. Add frozen.c to the list of source files
-   3. In a file that must do JSON parsing, add `#include "frozen.h"` and
-      call the API, like in an example below:
+   3. In a file that must do JSON parsing, add `#include "frozen.h"`
+      and call the API, like in an example below:
+
 
     #include <stdio.h>
     #include "frozen.h"
