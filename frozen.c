@@ -38,7 +38,7 @@ static int left(const struct frozen *f) {
 
 static int is_space(int ch) {
   return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
-};
+}
 
 static void skip_whitespaces(struct frozen *f) {
   while (f->cur < f->end && is_space(*f->cur)) f->cur++;
