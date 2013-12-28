@@ -15,6 +15,13 @@
 // Alternatively, you can license this library under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
+// To unit test on Mac system, do
+//
+// g++ unit_test.c -o unit_test -W -Wall -g -O0 -fprofile-arcs -ftest-coverage
+// clang unit_test.c -o unit_test -W -Wall -g -O0 -fprofile-arcs -ftest-coverage
+// ./unit_test
+// gcov -a unit_test.c
+
 #include "frozen.c"
 
 #include <stdlib.h>
@@ -50,11 +57,13 @@ static const char *test_errors(void) {
   int size = ARRAY_SIZE(ar);
   static const char *invalid_tests[] = {
     "1", "a:3", "\x01", "{:", " { 1", "{a:\"\n\"}", "{a:1x}", "{a:1e}",
-    "{a:.1}", "{a:0.}", "{a:0.e}", "{a:0.e1}", "{a:0.1e}",
+    "{a:.1}", "{a:0.}", "{a:0.e}", "{a:0.e1}", "{a:0.1e}", "{a:\"\\u\"}",
+    "{a:\"\\yx\"}",
     NULL
   };
   static const char *incomplete_tests[] = {
     "", " \r\n\t", "{", " { a", "{a:", "{a:\"", " { a : \"xx", "{a:12",
+    "{a:\"\\uf",
     NULL
   };
   static const struct { const char *str; int expected_len; } success_tests[] = {
@@ -138,6 +147,8 @@ static const char *test_errors(void) {
   ASSERT(find_json_token(ar, "g.h[0]") == &ar[22]);
   ASSERT(find_json_token(ar, "g.h[1]") == NULL);
   ASSERT(find_json_token(ar, "g.h1") == NULL);
+  ASSERT(find_json_token(ar, "") == NULL);
+  ASSERT(find_json_token(ar, NULL) == NULL);
 
   return NULL;
 }

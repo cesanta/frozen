@@ -266,7 +266,7 @@ static int path_part_len(const char *p) {
 
 const struct json_token *find_json_token(const struct json_token *toks,
                                          const char *path) {
-  if (path == 0 && path[0] == '\0') return 0;
+  if (path == 0 || path[0] == '\0') return 0;
   for (;;) {
     int i, ind2 = 0, ind = -1, skip = 2, n = path_part_len(path);
     if (path[0] == '\0') return 0;
