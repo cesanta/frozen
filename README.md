@@ -13,6 +13,33 @@ JSON parser for C/C++
    * Code is strict ISO C and strict ISO C++ at the same time
    * Complete 100% test coverage
 
+# How to use it
+
+   1. Copy `frozen.c` and `frozen.h` to your project
+   2. Add frozen.c to the list of source files
+   3. In a file that must do JSON parsing, add `#include "frozen.h"` and
+      call the API, like in an example below:
+
+    #include <stdio.h>
+    #include "frozen.h"
+
+    int main(void) {
+      static const char *json = " { foo: 1, bar: 2 } ";
+      struct json_token tokens[10];
+      int code, size = sizeof(tokens) / sizeof(tokens[0]);
+
+      code = parse_json(json, strlen(json), tokens, size);
+      if (code <= 0) {
+        printf("Error parsing [%s], error code: %d\n", json);
+      } else {
+        const struct json_token *tok = find_json_token(tokens, "bar");
+        printf("Value of bar is: [%.*s]\n", tok->len, tok->ptr);
+      }
+
+      return 0;
+    }
+
+
 # API
 
     int parse_json(const char *json_string, int json_string_length,
@@ -68,6 +95,8 @@ Return: pointer to the found token, or NULL on failure.
 
 
 ## Example: accessing configuration parameters
+
+    #include "frozen.h"
 
     static const char *config_str = " { ports: [ 80, 443 ] } ";
     struct json_token tokens[10];
