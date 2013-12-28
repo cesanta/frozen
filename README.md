@@ -10,7 +10,8 @@ JSON parser for C/C++
    * Very small footprint
    * No dependencies
    * Makes no memory allocations
-   * Code is strict ISO C and valid C++
+   * Code is strict ISO C and strict ISO C++ at the same time
+   * Complete 100% test coverage
 
 # API
 
