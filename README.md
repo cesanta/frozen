@@ -17,7 +17,10 @@ JSON parser for C/C++
 
    1. Copy `frozen.c` and `frozen.h` to your project
    2. Add `frozen.c` to the list of source files
-   3. In a file that must do JSON parsing call the API like in an example below
+   3. Parsing with Frozen is done in two steps: first, split JSON string
+      into tokens by `parse_json()`. Second, search for certain
+      parameters in parsed string by `find_json_token()`. Below is an example,
+      error handling is omitted for clarity:
 
 
         #include <stdio.h>
@@ -25,17 +28,14 @@ JSON parser for C/C++
 
         int main(void) {
           static const char *json = " { foo: 1, bar: 2 } ";
-          struct json_token tokens[10];
-          int parsed_len, size = sizeof(tokens) / sizeof(tokens[0]);
+          struct json_token arr[10], *tok;
 
-          parsed_len = parse_json(json, strlen(json), tokens, size);
+          // Tokenize json string, fill up tokens array
+          parse_json(json, strlen(json), arr, sizeof(arr) / sizeof(arr[0]));
 
-          if (parsed_len > 0) {
-            const struct json_token *tok = find_json_token(tokens, "bar");
-            printf("Value of bar is: [%.*s]\n", tok->len, tok->ptr);
-          } else {
-            printf("Error parsing [%s], error code: %d\n", json, parsed_len);
-          }
+          // Search for parameter "bar" and print it's value
+          tok = find_json_token(arr, "bar");
+          printf("Value of bar is: [%.*s]\n", tok->len, tok->ptr);
 
           return 0;
         }
@@ -79,6 +79,19 @@ returned, one of:
     #define JSON_STRING_INVALID           -1
     #define JSON_STRING_INCOMPLETE        -2
     #define JSON_TOKEN_ARRAY_TOO_SMALL    -3
+
+Below is an illustration on how JSON string gets tokenized:
+
+       JSON string:      {  "key_1" : "value_1",  "key_2": [ 12345, null  ]   }
+
+       JSON_TYPE_OBJECT  |<-------------------------------------------------->|
+       JSON_TYPE_STRING      |<->|
+       JSON_TYPE_STRING                |<--->|
+       JSON_TYPE_STRING                            |<->|
+       JSON_TYPE_ARRAY                                     |<------------>|
+       JSON_TYPE_NUMBER                                      |<->|
+       JSON_TYPE_NULL                                               |<>|
+       JSON_TYPE_EOF
 
 <!-- -->
 
