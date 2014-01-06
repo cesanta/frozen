@@ -30,7 +30,7 @@ JSON parser for C/C++
           static const char *json = " { foo: 1, bar: 2 } ";
           struct json_token arr[10], *tok;
 
-          // Tokenize json string, fill up tokens array
+          // Tokenize json string, fill in tokens array
           parse_json(json, strlen(json), arr, sizeof(arr) / sizeof(arr[0]));
 
           // Search for parameter "bar" and print it's value
