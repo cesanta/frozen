@@ -57,17 +57,21 @@ static const char *test_errors(void) {
   int size = ARRAY_SIZE(ar);
   static const char *invalid_tests[] = {
     "1", "a:3", "\x01", "{:", " { 1", "{a:\"\n\"}", "{a:1x}", "{a:1e}",
-    "{a:.1}", "{a:0.}", "{a:0.e}", "{a:0.e1}", "{a:0.1e}", "{a:\"\\u\"}",
-    "{a:\"\\yx\"}",
+    "{a:.1}", "{a:0.}", "{a:0.e}", "{a:0.e1}", "{a:0.1e}", "{a:\"\\u\" } ",
+    "{a:\"\\yx\"}", "{a:\"\\u111r\"}",
     NULL
   };
   static const char *incomplete_tests[] = {
     "", " \r\n\t", "{", " { a", "{a:", "{a:\"", " { a : \"xx", "{a:12",
-    "{a:\"\\uf",
+    "{a:\"\\uf", "{a:\"\\uff", "{a:\"\\ufff", "{a:\"\\uffff",
+    "{a:\"\\uffff\"", "{a:\"\\uffff\" ,",
     NULL
   };
   static const struct { const char *str; int expected_len; } success_tests[] = {
     { "{}", 2 },
+    // 2, 3, 4 byte utf-8 chars
+    { "{a:\"\xd0\xb1\xe3\x81\xaf\xf0\xa2\xb3\x82\"}", 15 },
+    { "{a:\"\\u0006\"}", 12 },
     { " { } ", 4 },
     { "{a:1}", 5 },
     { "{a:1.23}", 8 },
