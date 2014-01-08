@@ -179,9 +179,48 @@ static const char *test_config(void) {
   return NULL;
 }
 
+static const char *test_emit_overflow(void) {
+  char buf[1000];
+
+  memset(buf, 0, sizeof(buf));
+  ASSERT(json_emit_raw_str(buf, 0, "hi") == 0);
+  ASSERT(json_emit_quoted_str(buf, 0, "hi") == 0);
+  ASSERT(buf[0] == '\0');
+
+  return NULL;
+}
+
+static const char *test_emit_escapes(void) {
+  char buf[1000];
+  ASSERT(json_emit_quoted_str(buf, sizeof(buf), "\"\\\b\f\n\r\t") > 0);
+  ASSERT(strcmp(buf, "\"\\\"\\\\\\b\\f\\n\\r\\t\"") == 0);
+  return NULL;
+}
+
+static const char *test_emit(void) {
+  char buf[1000], *p = buf;
+
+  p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, "{");
+  p += json_emit_quoted_str(p, &buf[sizeof(buf)] - p, "foo");
+  p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, ":[");
+  p += json_emit_int(p, &buf[sizeof(buf)] - p, -123);
+  p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, ",");
+  p += json_emit_double(p, &buf[sizeof(buf)] - p, 1.23);
+  p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, ",");
+  p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, "true");
+  p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, "]}");
+  ASSERT(strcmp(buf, "{\"foo\":[-123,1.23,true]}") == 0);
+  ASSERT(p < &buf[sizeof(buf)]);
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_errors);
   RUN_TEST(test_config);
+  RUN_TEST(test_emit);
+  RUN_TEST(test_emit_escapes);
+  RUN_TEST(test_emit_overflow);
   return NULL;
 }
 

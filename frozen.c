@@ -15,6 +15,7 @@
 // Alternatively, you can license this library under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
+#include <stdio.h>
 #include "frozen.h"
 
 struct frozen {
@@ -313,4 +314,40 @@ const struct json_token *find_json_token(const struct json_token *toks,
     toks += i;
   }
   return 0;
+}
+
+int json_emit_int(char *buf, int buf_len, long int value) {
+  return buf_len <= 0 ? 0 : snprintf(buf, buf_len, "%ld", value);
+}
+
+int json_emit_double(char *buf, int buf_len, double value) {
+  return buf_len <= 0 ? 0 : snprintf(buf, buf_len, "%g", value);
+}
+
+int json_emit_quoted_str(char *buf, int buf_len, const char *str) {
+  int i = 0, j = 0, ch;
+
+#define EMIT(x) do { if (j < buf_len) buf[j++] = x; } while (0)
+
+  EMIT('"');
+  while ((ch = str[i++]) != '\0' && j < buf_len) {
+    switch (ch) {
+      case '"':  EMIT('\\'); EMIT('"'); break;
+      case '\\': EMIT('\\'); EMIT('\\'); break;
+      case '\b': EMIT('\\'); EMIT('b'); break;
+      case '\f': EMIT('\\'); EMIT('f'); break;
+      case '\n': EMIT('\\'); EMIT('n'); break;
+      case '\r': EMIT('\\'); EMIT('r'); break;
+      case '\t': EMIT('\\'); EMIT('t'); break;
+      default: EMIT(ch);
+    }
+  }
+  EMIT('"');
+  EMIT(0);
+
+  return j == 0 ? 0 : j - 1;
+}
+
+int json_emit_raw_str(char *buf, int buf_len, const char *str) {
+  return buf_len <= 0 ? 0 : snprintf(buf, buf_len, "%s", str);
 }

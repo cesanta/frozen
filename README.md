@@ -1,4 +1,4 @@
-JSON parser for C/C++
+JSON parser and generator for C/C++
 ===========================================
 
 # Features
@@ -101,11 +101,26 @@ Below is an illustration on how JSON string gets tokenized:
 This is a convenience function to fetch specific values from the parsed
 string. `toks` must be a valid array, successfully populated by `parse_json()`.
 A `path` is a string, an accessor to the desired element of the JSON object,
-as if it was written in Javascript. For example, if parsed JSON string is
-"{ foo : { bar: [1, 2, 3] } }", then path "foo.bar[0]" would return a token
-that points to number "1".  
+as if it was written in Javascript. For example, if parsed JSON string is  
+`"{ foo : { bar: [1, 2, 3] } }"`, then path `"foo.bar[0]"` would return a token
+that points to number `"1"`.  
 Return: pointer to the found token, or NULL on failure.
 
+
+    int json_emit_int(char *buf, int buf_len, long int value);
+    int json_emit_double(char *buf, int buf_len, double value);
+    int json_emit_quoted_str(char *buf, int buf_len, const char *str);
+    int json_emit_raw_str(char *buf, int buf_len, const char *str);
+
+These functions are used to generate JSON string. All of them accept
+a destination buffer and a value to output, and return number of bytes printed.
+Returned value can be bigger then destination buffer size, this is an
+indication of overflow. If there is no overflow, a buffer is guaranteed to
+be nul-terminated. Numbers are printed by `json_emit_double()` and
+`json_emit_int()` functions, strings are printed by `json_emit_quoted_str()`
+function. Values for `null`, `true`, `false`, and characters
+`{`, `}`, `[`, `]`, `,`, `:` are printed by
+`json_emit_raw_str()` function.
 
 ## Example: accessing configuration parameters
 
@@ -131,6 +146,19 @@ Return: pointer to the found token, or NULL on failure.
     ASSERT(find_json_token(tokens, "ports[1]") == &tokens[4]);
     ASSERT(find_json_token(tokens, "ports[3]") == NULL);  // Outside boundaries
     ASSERT(find_json_token(tokens, "foo.bar") == NULL);   // Nonexistent
+
+## Example: generating JSON string `{"foo":[-123,true]}`
+
+    char buf[1000], *p = buf;
+
+    p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, "{");
+    p += json_emit_quoted_str(p, &buf[sizeof(buf)] - p, "foo");
+    p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, ":[");
+    p += json_emit_int(p, &buf[sizeof(buf)] - p, -123);
+    p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, ",true]}");
+
+    ASSERT(strcmp(buf, "{\"foo\":[-123,true]}") == 0);
+    ASSERT(p < &buf[sizeof(buf)]);
 
 # License
 
