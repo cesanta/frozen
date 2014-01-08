@@ -70,9 +70,9 @@ static int is_hex_digit(int ch) {
 static int get_escape_len(const char *s, int len) {
   switch (*s) {
     case 'u':
-      return len < 4 ? JSON_STRING_INCOMPLETE :
-        is_hex_digit(s[0]) && is_hex_digit(s[1]) &&
-        is_hex_digit(s[2]) && is_hex_digit(s[3]) ? 4 : JSON_STRING_INVALID;
+      return len < 6 ? JSON_STRING_INCOMPLETE :
+        is_hex_digit(s[1]) && is_hex_digit(s[2]) &&
+        is_hex_digit(s[3]) && is_hex_digit(s[4]) ? 5 : JSON_STRING_INVALID;
     case '"': case '\\': case '/': case 'b':
     case 'f': case 'n': case 'r': case 't':
       return len < 2 ? JSON_STRING_INCOMPLETE : 1;
@@ -110,17 +110,29 @@ static int parse_identifier(struct frozen *f) {
   return 0;
 }
 
+static int get_utf8_char_len(unsigned char ch) {
+  if ((ch & 0x80) == 0) return 1;
+  switch (ch & 0xf0) {
+    case 0xf0: return 4;
+    case 0xe0: return 3;
+    default: return 2;
+  }
+}
+
 // string = '"' { quoted_printable_chars } '"'
 static int parse_string(struct frozen *f) {
-  int n, ch = 0;
+  int n, ch = 0, len = 0;
   TRY(test_and_skip(f, '"'));
   TRY(capture_ptr(f, f->cur, JSON_TYPE_STRING));
-  for (; f->cur < f->end; f->cur++) {
+  for (; f->cur < f->end; f->cur += len) {
     ch = * (unsigned char *) f->cur;
-    EXPECT(ch >= 32 && ch <= 127, JSON_STRING_INVALID);
+    len = get_utf8_char_len(ch);
+    //printf("[%c] [%d]\n", ch, len);
+    EXPECT(ch >= 32 && len > 0, JSON_STRING_INVALID);  // No control chars
+    EXPECT(len < left(f), JSON_STRING_INCOMPLETE);
     if (ch == '\\') {
       EXPECT((n = get_escape_len(f->cur + 1, left(f))) > 0, n);
-      f->cur += n;
+      len += n;
     } else if (ch == '"') {
       capture_len(f, f->num_tokens - 1, f->cur);
       f->cur++;
