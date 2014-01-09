@@ -4,13 +4,12 @@ JSON parser and generator for C/C++
 # Features
 
    * Portable to any environment
-   * Simple API: two functions for parsing and four for generation
-     for fetching parsed values
-   * Supports superset of JSON: allows non-quoted identifiers as object keys
+   * Simple API: 2 functions for parsing and 4 for generation
    * Very small footprint
    * No dependencies
    * Makes no memory allocations
    * Code is strict ISO C and strict ISO C++ at the same time
+   * Supports superset of JSON: allows non-quoted identifiers as object keys
    * Complete 100% test coverage
 
 # How to use it
