@@ -324,6 +324,10 @@ int json_emit_double(char *buf, int buf_len, double value) {
   return buf_len <= 0 ? 0 : snprintf(buf, buf_len, "%g", value);
 }
 
+int json_emit_boolean(char *buf, int buf_len, _Bool value) {
+  return buf_len <= 0 ? 0 : snprintf(buf, buf_len, "%s", (value ? "true": "false"));
+}
+
 int json_emit_quoted_str(char *buf, int buf_len, const char *str) {
   int i = 0, j = 0, ch;
 
