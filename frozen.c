@@ -86,7 +86,7 @@ static int get_escape_len(const char *s, int len) {
   }
 }
 
-static int capture_ptr(struct frozen *f, const char *ptr, int type) {
+static int capture_ptr(struct frozen *f, const char *ptr, enum json_type type) {
   if (f->tokens == 0 || f->max_tokens == 0) return 0;
   if (f->num_tokens >= f->max_tokens) return JSON_TOKEN_ARRAY_TOO_SMALL;
   f->tokens[f->num_tokens].ptr = ptr;
