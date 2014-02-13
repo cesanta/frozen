@@ -92,6 +92,9 @@ static const char *test_errors(void) {
   };
   const char *s1 = " { a: 1, b: \"hi there\", c: true, d: false, "
     " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } } ";
+  const char *s2 = "{ a: 1, b: \"hi there\", c: true, d: false, "
+    " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } }";
+  const char *s3 = "{ \"1\": [], h: [ 7 ] }";
   int i;
 
   ASSERT(parse_json(NULL, 0, NULL, 0) == JSON_STRING_INVALID);
@@ -118,9 +121,7 @@ static const char *test_errors(void) {
   ASSERT(parse_json(s1, strlen(s1), NULL, 0) > 0);
   ASSERT(parse_json(s1, strlen(s1), ar, 10) == JSON_TOKEN_ARRAY_TOO_SMALL);
   ASSERT(parse_json(s1, strlen(s1), ar, size) > 0);
-  ASSERT(cmp_token(&ar[0], "{ a: 1, b: \"hi there\", c: true, d: false, "
-                   " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } }",
-                   JSON_TYPE_OBJECT));
+  ASSERT(cmp_token(&ar[0], s2, JSON_TYPE_OBJECT));
   ASSERT(cmp_token(&ar[1], "a", JSON_TYPE_STRING));
   ASSERT(cmp_token(&ar[2], "1", JSON_TYPE_NUMBER));
   ASSERT(cmp_token(&ar[3], "b", JSON_TYPE_STRING));
@@ -137,7 +138,7 @@ static const char *test_errors(void) {
   ASSERT(cmp_token(&ar[14], "-2", JSON_TYPE_NUMBER));
   ASSERT(cmp_token(&ar[15], "3", JSON_TYPE_NUMBER));
   ASSERT(cmp_token(&ar[16], "g", JSON_TYPE_STRING));
-  ASSERT(cmp_token(&ar[17], "{ \"1\": [], h: [ 7 ] }" , JSON_TYPE_OBJECT));
+  ASSERT(cmp_token(&ar[17], s3, JSON_TYPE_OBJECT));
   ASSERT(cmp_token(&ar[18], "1", JSON_TYPE_STRING));
   ASSERT(cmp_token(&ar[19], "[]", JSON_TYPE_ARRAY));
   ASSERT(cmp_token(&ar[20], "h", JSON_TYPE_STRING));
@@ -191,14 +192,16 @@ static const char *test_emit_overflow(void) {
 }
 
 static const char *test_emit_escapes(void) {
+  const char *s4 = "\"\\\"\\\\\\b\\f\\n\\r\\t\"";
   char buf[1000];
   ASSERT(json_emit_quoted_str(buf, sizeof(buf), "\"\\\b\f\n\r\t") > 0);
-  ASSERT(strcmp(buf, "\"\\\"\\\\\\b\\f\\n\\r\\t\"") == 0);
+  ASSERT(strcmp(buf, s4) == 0);
   return NULL;
 }
 
 static const char *test_emit(void) {
   char buf[1000], *p = buf;
+  const char *s5 = "{\"foo\":[-123,1.23,true]}";
 
   p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, "{");
   p += json_emit_quoted_str(p, &buf[sizeof(buf)] - p, "foo");
@@ -209,7 +212,7 @@ static const char *test_emit(void) {
   p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, ",");
   p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, "true");
   p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, "]}");
-  ASSERT(strcmp(buf, "{\"foo\":[-123,1.23,true]}") == 0);
+  ASSERT(strcmp(buf, s5) == 0);
   ASSERT(p < &buf[sizeof(buf)]);
 
   return NULL;
