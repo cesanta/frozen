@@ -218,12 +218,36 @@ static const char *test_emit(void) {
   return NULL;
 }
 
+static const char *test_nested(void) {
+  struct json_token ar[100];
+  const char *s = "{ a : [ [1, 2, { b : 2 } ] ] }";
+  enum json_type types[] = {
+    JSON_TYPE_OBJECT, JSON_TYPE_STRING, JSON_TYPE_ARRAY, JSON_TYPE_ARRAY,
+    JSON_TYPE_NUMBER, JSON_TYPE_NUMBER, JSON_TYPE_OBJECT, JSON_TYPE_STRING,
+    JSON_TYPE_NUMBER, JSON_TYPE_EOF
+  };
+  int i, ar_size = ARRAY_SIZE(ar), types_size = ARRAY_SIZE(types);
+
+  ASSERT(parse_json(s, strlen(s), ar, ar_size) == (int) strlen(s));
+  for (i = 0; i < types_size; i++) {
+    ASSERT(ar[i].type == types[i]);
+  }
+  ASSERT(find_json_token(ar, "a[0]") == &ar[3]);
+  ASSERT(find_json_token(ar, "a[0][0]") == &ar[4]);
+  ASSERT(find_json_token(ar, "a[0][1]") == &ar[5]);
+  ASSERT(find_json_token(ar, "a[0][2]") == &ar[6]);
+  ASSERT(find_json_token(ar, "a[0][2].b") == &ar[8]);
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_errors);
   RUN_TEST(test_config);
   RUN_TEST(test_emit);
   RUN_TEST(test_emit_escapes);
   RUN_TEST(test_emit_overflow);
+  RUN_TEST(test_nested);
   return NULL;
 }
 

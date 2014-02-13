@@ -306,9 +306,9 @@ const struct json_token *find_json_token(const struct json_token *toks,
         i += skip - 1;
         break;
       };
-      if (toks[i + 1].type == JSON_TYPE_ARRAY ||
-          toks[i + 1].type == JSON_TYPE_OBJECT) {
-        i += toks[i + 1].num_desc;
+      if (toks[i - 1 + skip].type == JSON_TYPE_ARRAY ||
+          toks[i - 1 + skip].type == JSON_TYPE_OBJECT) {
+        i += toks[i - 1 + skip].num_desc;
       }
     }
     if (i == toks[-1].num_desc) return 0;
