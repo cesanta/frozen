@@ -131,7 +131,7 @@ static int parse_string(struct frozen *f) {
   TRY(capture_ptr(f, f->cur, JSON_TYPE_STRING));
   for (; f->cur < f->end; f->cur += len) {
     ch = * (unsigned char *) f->cur;
-    len = get_utf8_char_len(ch);
+    len = get_utf8_char_len((unsigned char) ch);
     //printf("[%c] [%d]\n", ch, len);
     EXPECT(ch >= 32 && len > 0, JSON_STRING_INVALID);  // No control chars
     EXPECT(len < left(f), JSON_STRING_INCOMPLETE);
