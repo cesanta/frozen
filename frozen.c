@@ -18,6 +18,10 @@
 #include <stdio.h>
 #include "frozen.h"
 
+#ifdef _WIN32
+#define snprintf _snprintf
+#endif
+
 struct frozen {
   const char *end;
   const char *cur;
