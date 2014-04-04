@@ -4,10 +4,9 @@ JSON parser and generator for C/C++
 # Features
 
    * Portable to any environment
-   * Simple API: 2 functions for parsing and 4 for generation
+   * Simple, easy to understand API
    * Very small footprint
    * No dependencies
-   * Makes no memory allocations
    * Code is strict ISO C and strict ISO C++ at the same time
    * Supports superset of JSON: allows non-quoted identifiers as object keys
    * Complete 100% test coverage
@@ -17,7 +16,8 @@ JSON parser and generator for C/C++
    1. Copy `frozen.c` and `frozen.h` to your project
    2. Add `frozen.c` to the list of source files
    3. Parsing with Frozen is done in two steps: first, split JSON string
-      into tokens by `parse_json()`. Second, search for certain
+      into tokens by `parse_json()`, `parse_json2()` or `parse_json_file()`.
+      Second, search for certain
       parameters in parsed string by `find_json_token()`. Below is an example,
       error handling is omitted for clarity:
 
@@ -27,14 +27,17 @@ JSON parser and generator for C/C++
 
         int main(void) {
           static const char *json = " { foo: 1, bar: 2 } ";
-          struct json_token arr[10], *tok;
+          struct json_token *arr, *tok;
 
           // Tokenize json string, fill in tokens array
-          parse_json(json, strlen(json), arr, sizeof(arr) / sizeof(arr[0]));
+          arr = parse_json2(json, strlen(json));
 
           // Search for parameter "bar" and print it's value
           tok = find_json_token(arr, "bar");
           printf("Value of bar is: [%.*s]\n", tok->len, tok->ptr);
+
+          // Do not forget to free allocated tokens array
+          free(arr);
 
           return 0;
         }
@@ -43,10 +46,17 @@ JSON parser and generator for C/C++
 
     int parse_json(const char *json_string, int json_string_length,
                    struct json_token *tokens_array, int size_of_tokens_array);
+    struct json_token *parse_json2(const char *json_string, int string_length);
+    struct json_token *parse_json_file(const char *path);
 
-Tokenizes `json_string` of length `json_string_length`.
-If `tokens_array` is not `NULL`, then
-all `parse_json` will store tokens in the `tokens_array`. Token with type
+`parse_json()` and `parse_json2()` parse a string, `parse_json_file()` parses
+file. `parse_json()` needs pre-allocated tokens array or NULL, whereas
+`parse_json2()` and `parse_json_file()` allocate tokens array automatically.
+
+
+`parse_json()` tokenizes `json_string` of length `json_string_length`.
+If `tokens_array` is not `NULL`, then `parse_json()` will store tokens
+in the `tokens_array`. Token with type
 `JSON_TYPE_EOF` marks the end of parsed tokens. JSON token is defined as:
 
     struct json_token {
@@ -78,6 +88,9 @@ returned, one of:
     #define JSON_STRING_INVALID           -1
     #define JSON_STRING_INCOMPLETE        -2
     #define JSON_TOKEN_ARRAY_TOO_SMALL    -3
+
+`parse_json2()` and `parse_json_file()` return NULL on error
+and non-NULL on success.
 
 Below is an illustration on how JSON string gets tokenized:
 

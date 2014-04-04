@@ -16,10 +16,20 @@
 // license, as set out in <http://cesanta.com/products.html>.
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "frozen.h"
 
 #ifdef _WIN32
 #define snprintf _snprintf
+#endif
+
+#ifndef FROZEN_REALLOC
+#define FROZEN_REALLOC realloc
+#endif
+
+#ifndef FROZEN_FREE
+#define FROZEN_FREE free
 #endif
 
 struct frozen {
@@ -28,6 +38,7 @@ struct frozen {
   struct json_token *tokens;
   int max_tokens;
   int num_tokens;
+  int do_realloc;
 };
 
 static int parse_object(struct frozen *f);
@@ -87,7 +98,14 @@ static int get_escape_len(const char *s, int len) {
 }
 
 static int capture_ptr(struct frozen *f, const char *ptr, enum json_type type) {
-  if (f->tokens == 0 || f->max_tokens == 0) return 0;
+  if (f->do_realloc && f->num_tokens >= f->max_tokens) {
+    int new_size = f->max_tokens == 0 ? 100 : f->max_tokens * 2;
+    void *p = FROZEN_REALLOC(f->tokens, new_size * sizeof(f->tokens[0]));
+    if (p == NULL) return JSON_TOKEN_ARRAY_TOO_SMALL;
+    f->max_tokens = new_size;
+    f->tokens = (struct json_token *) p;
+  }
+  if (f->tokens == NULL || f->max_tokens == 0) return 0;
   if (f->num_tokens >= f->max_tokens) return JSON_TOKEN_ARRAY_TOO_SMALL;
   f->tokens[f->num_tokens].ptr = ptr;
   f->tokens[f->num_tokens].type = type;
@@ -263,16 +281,54 @@ static int parse_object(struct frozen *f) {
   return 0;
 }
 
+static int doit(struct frozen *f) {
+  if (f->cur == 0 || f->end < f->cur) return JSON_STRING_INVALID;
+  if (f->end == f->cur) return JSON_STRING_INCOMPLETE;
+  TRY(parse_object(f));
+  TRY(capture_ptr(f, f->cur, JSON_TYPE_EOF));
+  capture_len(f, f->num_tokens, f->cur);
+  return 0;
+}
+
 // json = object
 int parse_json(const char *s, int s_len, struct json_token *arr, int arr_len) {
-  struct frozen frozen = { s + s_len, s, arr, arr_len, 0 };
-  if (s == 0 || s_len < 0) return JSON_STRING_INVALID;
-  if (s_len == 0) return JSON_STRING_INCOMPLETE;
-  TRY(parse_object(&frozen));
-  TRY(capture_ptr(&frozen, frozen.cur, JSON_TYPE_EOF));
-  capture_len(&frozen, frozen.num_tokens, frozen.cur);
-
+  struct frozen frozen = { s + s_len, s, arr, arr_len, 0, 0 };
+  TRY(doit(&frozen));
   return frozen.cur - s;
+}
+
+struct json_token *parse_json2(const char *s, int s_len) {
+  struct frozen frozen = { s + s_len, s, NULL, 0, 0, 1 };
+  if (doit(&frozen) < 0) {
+    FROZEN_FREE((void *) frozen.tokens);
+    frozen.tokens = NULL;
+  }
+  return frozen.tokens;
+}
+
+struct json_token *parse_json_file(const char *path) {
+  FILE *fp;
+  char *file_data = NULL, buf[BUFSIZ];
+  int n, buf_size = 0, file_size = 0;
+  struct json_token *result;
+
+  if ((fp = fopen(path, "rb")) == NULL) return NULL;
+  while ((n = fread(buf, 1, sizeof(buf), fp)) > 0) {
+    if (buf_size - file_size < n) {
+      int new_size = buf_size == 0 ? sizeof(buf) : buf_size * 2;
+      void *p = FROZEN_REALLOC(file_data, new_size);
+      if (p == NULL) { fclose(fp); return NULL; }
+      file_data = (char *) p;
+      buf_size = new_size;
+    }
+    memcpy(file_data + file_size, buf, n);
+    file_size += n;
+  }
+  fclose(fp);
+
+  result = parse_json2(file_data, file_size);
+  FROZEN_FREE((char *) file_data);
+  return result;
 }
 
 static int path_part_len(const char *p) {

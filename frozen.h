@@ -48,6 +48,9 @@ struct json_token {
 int parse_json(const char *json_string, int json_string_length,
                struct json_token *tokens_array, int size_of_tokens_array);
 
+struct json_token *parse_json2(const char *json_string, int string_length);
+struct json_token *parse_json_file(const char *path);
+
 const struct json_token *find_json_token(const struct json_token *toks,
                                          const char *path);
 
