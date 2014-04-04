@@ -56,6 +56,7 @@ const struct json_token *find_json_token(const struct json_token *toks,
 
 int json_emit_int(char *buf, int buf_len, long int value);
 int json_emit_double(char *buf, int buf_len, double value);
+int json_emit_boolean(char *buf, int buf_len, _Bool value);
 int json_emit_quoted_str(char *buf, int buf_len, const char *str);
 int json_emit_raw_str(char *buf, int buf_len, const char *str);
 
