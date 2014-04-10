@@ -15,6 +15,8 @@
 // Alternatively, you can license this library under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
+#define _CRT_SECURE_NO_WARNINGS // Disable deprecation warning in VS2005+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
