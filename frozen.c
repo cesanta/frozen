@@ -47,7 +47,7 @@ static int parse_object(struct frozen *f);
 static int parse_value(struct frozen *f);
 
 #define EXPECT(cond, err_code) do { if (!(cond)) return (err_code); } while (0)
-#define TRY(expr) do { int n = expr; if (n < 0) return n; } while (0)
+#define TRY(expr) do { int _n = expr; if (_n < 0) return _n; } while (0)
 #define END_OF_STRING (-1)
 
 static int left(const struct frozen *f) {
