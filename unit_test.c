@@ -249,24 +249,6 @@ static const char *test_realloc(void) {
   return NULL;
 }
 
-static const char *test_file(void) {
-  static const char *test_file_name = "test.json";
-  struct json_token *p;
-  FILE *fp;
-
-  ASSERT((p = parse_json_file(test_file_name)) == NULL);
-
-  ASSERT((fp = fopen(test_file_name, "w+")) != NULL);
-  fprintf(fp, "%s\n", "{ foo: 1, bar: [1, 2, 3] }");
-  fclose(fp);
-
-  ASSERT((p = parse_json_file(test_file_name)) != NULL);
-  free(p);
-  remove(test_file_name);
-
-  return NULL;
-}
-
 static const char *run_all_tests(void) {
   RUN_TEST(test_errors);
   RUN_TEST(test_config);
@@ -275,7 +257,6 @@ static const char *run_all_tests(void) {
   RUN_TEST(test_emit_overflow);
   RUN_TEST(test_nested);
   RUN_TEST(test_realloc);
-  RUN_TEST(test_file);
   return NULL;
 }
 

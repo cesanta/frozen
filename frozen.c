@@ -308,31 +308,6 @@ struct json_token *parse_json2(const char *s, int s_len) {
   return frozen.tokens;
 }
 
-struct json_token *parse_json_file(const char *path) {
-  FILE *fp;
-  char *file_data = NULL, buf[BUFSIZ];
-  int n, buf_size = 0, file_size = 0;
-  struct json_token *result;
-
-  if ((fp = fopen(path, "rb")) == NULL) return NULL;
-  while ((n = fread(buf, 1, sizeof(buf), fp)) > 0) {
-    if (buf_size - file_size < n) {
-      int new_size = buf_size == 0 ? sizeof(buf) : buf_size * 2;
-      void *p = FROZEN_REALLOC(file_data, new_size);
-      if (p == NULL) { fclose(fp); return NULL; }
-      file_data = (char *) p;
-      buf_size = new_size;
-    }
-    memcpy(file_data + file_size, buf, n);
-    file_size += n;
-  }
-  fclose(fp);
-
-  result = parse_json2(file_data, file_size);
-  FROZEN_FREE((char *) file_data);
-  return result;
-}
-
 static int path_part_len(const char *p) {
   int i = 0;
   while (p[i] != '\0' && p[i] != '[' && p[i] != '.') i++;
