@@ -360,6 +360,7 @@ int json_emit_double(char *buf, int buf_len, double value) {
 }
 
 int json_emit_quoted_str(char *buf, int buf_len, const char *str) {
+  if (buf_len <= 1) return 0;
   int i = 0, j = 0, ch;
 
 #define EMIT(x) do { if (j < buf_len) buf[j++] = x; } while (0)
