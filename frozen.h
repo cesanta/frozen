@@ -37,7 +37,7 @@ struct json_token {
   const char *ptr;      // Points to the beginning of the token
   int len;              // Token length
   int num_desc;         // For arrays and object, total number of descendants
-  enum json_type type;  // Type of the token, possible values below
+  enum json_type type;  // Type of the token, possible values above
 };
 
 // Error codes
