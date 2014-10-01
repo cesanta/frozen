@@ -57,6 +57,7 @@ int json_emit_int(char *buf, int buf_len, long int value);
 int json_emit_double(char *buf, int buf_len, double value);
 int json_emit_quoted_str(char *buf, int buf_len, const char *str);
 int json_emit_raw_str(char *buf, int buf_len, const char *str);
+int json_emit(char *buf, int buf_len, const char *fmt, ...);
 
 #ifdef __cplusplus
 }

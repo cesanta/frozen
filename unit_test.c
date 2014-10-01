@@ -215,6 +215,14 @@ static const char *test_emit(void) {
   ASSERT(strcmp(buf, s5) == 0);
   ASSERT(p < &buf[sizeof(buf)]);
 
+  ASSERT(json_emit(buf, sizeof(buf), "{s:[i,f,S]}",
+         "foo", (long) -123, 1.23, "true") > 0);
+  ASSERT(json_emit(buf, 4, "{S:i}", "a", 12345) < 0);
+  ASSERT(json_emit(buf, sizeof(buf), "{S:d}", "a", 12345) == 0);
+
+  ASSERT(json_emit(buf, sizeof(buf), "{s:[i,T, F,N]}", "foo", (long) -7) > 0);
+  ASSERT(strcmp(buf, "{\"foo\":[-7,true, false,null]}") == 0);
+
   return NULL;
 }
 

@@ -157,18 +157,10 @@ function. Values for `null`, `true`, `false`, and characters
     ASSERT(find_json_token(tokens, "ports[3]") == NULL);  // Outside boundaries
     ASSERT(find_json_token(tokens, "foo.bar") == NULL);   // Nonexistent
 
-## Example: generating JSON string `{"foo":[-123,true]}`
+## Example: generating JSON string `{ "foo": [-123, true, false, null] }`
 
-    char buf[1000], *p = buf;
-
-    p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, "{");
-    p += json_emit_quoted_str(p, &buf[sizeof(buf)] - p, "foo");
-    p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, ":[");
-    p += json_emit_int(p, &buf[sizeof(buf)] - p, -123);
-    p += json_emit_raw_str(p, &buf[sizeof(buf)] - p, ",true]}");
-
-    ASSERT(strcmp(buf, "{\"foo\":[-123,true]}") == 0);
-    ASSERT(p < &buf[sizeof(buf)]);
+    char buf[1000];
+    json_emit(buf, sizeof(buf), "{ s: [i, T, F, N] }", "foo", (long) -123);
 
 # License
 

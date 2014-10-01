@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include "frozen.h"
 
 #ifdef _WIN32
@@ -393,4 +394,46 @@ int json_emit_quoted_str(char *buf, int buf_len, const char *str) {
 
 int json_emit_raw_str(char *buf, int buf_len, const char *str) {
   return buf_len <= 0 ? 0 : snprintf(buf, buf_len, "%s", str);
+}
+
+int json_emit(char *s, int s_len, const char *fmt, ...) {
+  const char *end = s + s_len;
+  va_list ap;
+
+  va_start(ap, fmt);
+  while (*fmt != '\0') {
+    switch (*fmt) {
+      case '[': case ']': case '{': case '}': case ',': case ':':
+      case ' ': case '\r': case '\n': case '\t':
+        if (s < end) *s++ = *fmt;
+        break;
+      case 'i':
+        s += json_emit_int(s, end - s, va_arg(ap, long));
+        break;
+      case 'f':
+        s += json_emit_double(s, end - s, va_arg(ap, double));
+        break;
+      case 's':
+        s += json_emit_quoted_str(s, end - s, va_arg(ap, char *));
+        break;
+      case 'S':
+        s += json_emit_raw_str(s, end - s, va_arg(ap, char *));
+        break;
+      case 'T':
+        s += json_emit_raw_str(s, end - s, "true");
+        break;
+      case 'F':
+        s += json_emit_raw_str(s, end - s, "false");
+        break;
+      case 'N':
+        s += json_emit_raw_str(s, end - s, "null");
+        break;
+      default:
+        return 0;
+    }
+    fmt++;
+  }
+  va_end(ap);
+
+  return end - s;
 }
