@@ -214,33 +214,39 @@ static int compare(const char *s, const char *str, int len) {
   return i == len ? 1 : 0;
 }
 
+static int expect(struct frozen *f, const char *s, int len, enum json_type t) {
+  int i, n = left(f);
+
+  TRY(capture_ptr(f, f->cur, t));
+  for (i = 0; i < len; i++) {
+    if (i >= n) return JSON_STRING_INCOMPLETE;
+    if (f->cur[i] != s[i]) return JSON_STRING_INVALID;
+  }
+  f->cur += len;
+  TRY(capture_len(f, f->num_tokens - 1, f->cur));
+
+  return 0;
+}
+
 // value = 'null' | 'true' | 'false' | number | string | array | object
 static int parse_value(struct frozen *f) {
   int ch = cur(f);
-  if (ch == '"') {
-    TRY(parse_string(f));
-  } else if (ch == '{') {
-    TRY(parse_object(f));
-  } else if (ch == '[') {
-    TRY(parse_array(f));
-  } else if (ch == 'n' && left(f) > 4 && compare(f->cur, "null", 4)) {
-    TRY(capture_ptr(f, f->cur, JSON_TYPE_NULL));
-    f->cur += 4;
-    capture_len(f, f->num_tokens - 1, f->cur);
-  } else if (ch == 't' && left(f) > 4 && compare(f->cur, "true", 4)) {
-    TRY(capture_ptr(f, f->cur, JSON_TYPE_TRUE));
-    f->cur += 4;
-    capture_len(f, f->num_tokens - 1, f->cur);
-  } else if (ch == 'f' && left(f) > 5 && compare(f->cur, "false", 5)) {
-    TRY(capture_ptr(f, f->cur, JSON_TYPE_FALSE));
-    f->cur += 5;
-    capture_len(f, f->num_tokens - 1, f->cur);
-  } else if (is_digit(ch) ||
-             (ch == '-' && f->cur + 1 < f->end && is_digit(f->cur[1]))) {
-    TRY(parse_number(f));
-  } else {
-    return ch == END_OF_STRING ? JSON_STRING_INCOMPLETE : JSON_STRING_INVALID;
+
+  switch (ch) {
+    case '"': TRY(parse_string(f)); break;
+    case '{': TRY(parse_object(f)); break;
+    case '[': TRY(parse_array(f)); break;
+    case 'n': TRY(expect(f, "null", 4, JSON_TYPE_NULL)); break;
+    case 't': TRY(expect(f, "true", 4, JSON_TYPE_TRUE)); break;
+    case 'f': TRY(expect(f, "false", 5, JSON_TYPE_FALSE)); break;
+    case '-': case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+      TRY(parse_number(f));
+      break;
+    default:
+      return ch == END_OF_STRING ? JSON_STRING_INCOMPLETE : JSON_STRING_INVALID;
   }
+
   return 0;
 }
 

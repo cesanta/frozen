@@ -64,7 +64,7 @@ static const char *test_errors(void) {
   static const char *incomplete_tests[] = {
     "", " \r\n\t", "{", " { a", "{a:", "{a:\"", " { a : \"xx", "{a:12",
     "{a:\"\\uf", "{a:\"\\uff", "{a:\"\\ufff", "{a:\"\\uffff",
-    "{a:\"\\uffff\"", "{a:\"\\uffff\" ,",
+    "{a:\"\\uffff\"", "{a:\"\\uffff\" ,", "{a:n", "{a:nu", "{a:nul", "{a:null",
     NULL
   };
   static const struct { const char *str; int expected_len; } success_tests[] = {
