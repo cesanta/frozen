@@ -135,17 +135,16 @@ function. Values for `null`, `true`, `false`, and characters
     int json_emit(char *buf, int buf_len, const char *format, ...);
 
 A convenience function that generates JSON string using formatted output.
-Characters allowed in `format` string:
-
-- `[`, `]`, `{`, `}`, `,`, `:`, `\r`, `\n`, `\t`, ` `: these characters
-would be appended to the output buffer as-is,
-- `i`: argument must be an `long` value, outputs number
-- `f`: argument must be a `double` value, outputs number
-- `s`: argument must be a `\0`-terminated `char *` value, outputs quoted string
-- `S`: argument must be a `\0`-terminated `char *` value, outputs unquoted string
-- `N`: outputs `null`
-- `T`: outputs `true`
-- `F`: outputs `false`
+Characters allowed in `format` string:  
+`[`, `]`, `{`, `}`, `,`, `:`, `\r`, `\n`, `\t`, ` `: these characters
+are appended to the output buffer as-is  
+`i`: argument must be an `long` value, outputs number  
+`f`: argument must be a `double` value, outputs number  
+`s`: argument must be a `\0`-terminated `char *` value, outputs quoted string  
+`S`: argument must be a `\0`-terminated `char *` value, outputs unquoted string  
+`N`: outputs `null`  
+`T`: outputs `true`  
+`F`: outputs `false`  
 
 ## Example: accessing configuration parameters
 
