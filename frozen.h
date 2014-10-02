@@ -53,10 +53,10 @@ struct json_token *parse_json2(const char *json_string, int string_length);
 const struct json_token *find_json_token(const struct json_token *toks,
                                          const char *path);
 
-int json_emit_int(char *buf, int buf_len, long int value);
+int json_emit_long(char *buf, int buf_len, long value);
 int json_emit_double(char *buf, int buf_len, double value);
 int json_emit_quoted_str(char *buf, int buf_len, const char *str);
-int json_emit_raw_str(char *buf, int buf_len, const char *str);
+int json_emit_unquoted_str(char *buf, int buf_len, const char *str);
 int json_emit(char *buf, int buf_len, const char *fmt, ...);
 
 #ifdef __cplusplus

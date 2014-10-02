@@ -117,10 +117,10 @@ that points to number `"1"`.
 Return: pointer to the found token, or NULL on failure.
 
 
-    int json_emit_int(char *buf, int buf_len, long int value);
+    int json_emit_long(char *buf, int buf_len, long value);
     int json_emit_double(char *buf, int buf_len, double value);
     int json_emit_quoted_str(char *buf, int buf_len, const char *str);
-    int json_emit_raw_str(char *buf, int buf_len, const char *str);
+    int json_emit_unquoted_str(char *buf, int buf_len, const char *str);
 
 These functions are used to generate JSON string. All of them accept
 a destination buffer and a value to output, and return number of bytes printed.

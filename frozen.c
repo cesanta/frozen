@@ -358,23 +358,22 @@ const struct json_token *find_json_token(const struct json_token *toks,
   return 0;
 }
 
-int json_emit_int(char *buf, int buf_len, long int value) {
-  return buf_len <= 0 ? 0 : snprintf(buf, buf_len, "%ld", value);
+int json_emit_long(char *buf, int buf_len, long int value) {
+  return snprintf(buf, buf_len > 0 ? buf_len : 0, "%ld", value);
 }
 
 int json_emit_double(char *buf, int buf_len, double value) {
-  return buf_len <= 0 ? 0 : snprintf(buf, buf_len, "%g", value);
+  return snprintf(buf, buf_len > 0 ? buf_len : 0, "%g", value);
 }
 
-int json_emit_quoted_str(char *buf, int buf_len, const char *str) {
-  int i = 0, j = 0, ch;
+int json_emit_quoted_str(char *s, int s_len, const char *str) {
+  const char *begin = s, *end = s + s_len;
+  char ch;
 
-  if (buf_len <= 1) return 0;
-
-#define EMIT(x) do { if (j < buf_len) buf[j++] = x; } while (0)
+#define EMIT(x) do { if (s < end) *s = x; s++; } while (0)
 
   EMIT('"');
-  while ((ch = str[i++]) != '\0' && j < buf_len) {
+  while ((ch = *str++) != '\0') {
     switch (ch) {
       case '"':  EMIT('\\'); EMIT('"'); break;
       case '\\': EMIT('\\'); EMIT('\\'); break;
@@ -387,13 +386,13 @@ int json_emit_quoted_str(char *buf, int buf_len, const char *str) {
     }
   }
   EMIT('"');
-  EMIT(0);
+  if (s < end) *s = '\0';
 
-  return j == 0 ? 0 : j - 1;
+  return s - begin;
 }
 
-int json_emit_raw_str(char *buf, int buf_len, const char *str) {
-  return buf_len <= 0 ? 0 : snprintf(buf, buf_len, "%s", str);
+int json_emit_unquoted_str(char *buf, int buf_len, const char *str) {
+  return snprintf(buf, buf_len > 0 ? buf_len : 0, "%s", str);
 }
 
 int json_emit(char *s, int s_len, const char *fmt, ...) {
@@ -405,10 +404,11 @@ int json_emit(char *s, int s_len, const char *fmt, ...) {
     switch (*fmt) {
       case '[': case ']': case '{': case '}': case ',': case ':':
       case ' ': case '\r': case '\n': case '\t':
-        if (s < end) *s++ = *fmt;
+        if (s < end) *s = *fmt;
+        s++;
         break;
       case 'i':
-        s += json_emit_int(s, end - s, va_arg(ap, long));
+        s += json_emit_long(s, end - s, va_arg(ap, long));
         break;
       case 'f':
         s += json_emit_double(s, end - s, va_arg(ap, double));
@@ -417,16 +417,16 @@ int json_emit(char *s, int s_len, const char *fmt, ...) {
         s += json_emit_quoted_str(s, end - s, va_arg(ap, char *));
         break;
       case 'S':
-        s += json_emit_raw_str(s, end - s, va_arg(ap, char *));
+        s += json_emit_unquoted_str(s, end - s, va_arg(ap, char *));
         break;
       case 'T':
-        s += json_emit_raw_str(s, end - s, "true");
+        s += json_emit_unquoted_str(s, end - s, "true");
         break;
       case 'F':
-        s += json_emit_raw_str(s, end - s, "false");
+        s += json_emit_unquoted_str(s, end - s, "false");
         break;
       case 'N':
-        s += json_emit_raw_str(s, end - s, "null");
+        s += json_emit_unquoted_str(s, end - s, "null");
         break;
       default:
         return 0;
@@ -434,6 +434,8 @@ int json_emit(char *s, int s_len, const char *fmt, ...) {
     fmt++;
   }
   va_end(ap);
+
+  if (s < end) *s = '\0';
 
   return end - s;
 }
