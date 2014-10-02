@@ -366,14 +366,15 @@ int json_emit_double(char *buf, int buf_len, double value) {
   return snprintf(buf, buf_len > 0 ? buf_len : 0, "%g", value);
 }
 
-int json_emit_quoted_str(char *s, int s_len, const char *str) {
-  const char *begin = s, *end = s + s_len;
+int json_emit_quoted_str(char *s, int s_len, const char *str, int len) {
+  const char *begin = s, *end = s + s_len, *str_end = str + len;
   char ch;
 
 #define EMIT(x) do { if (s < end) *s = x; s++; } while (0)
 
   EMIT('"');
-  while ((ch = *str++) != '\0') {
+  while (str < str_end) {
+    ch = *str++;
     switch (ch) {
       case '"':  EMIT('\\'); EMIT('"'); break;
       case '\\': EMIT('\\'); EMIT('\\'); break;
@@ -391,12 +392,16 @@ int json_emit_quoted_str(char *s, int s_len, const char *str) {
   return s - begin;
 }
 
-int json_emit_unquoted_str(char *buf, int buf_len, const char *str) {
-  return snprintf(buf, buf_len > 0 ? buf_len : 0, "%s", str);
+int json_emit_unquoted_str(char *buf, int buf_len, const char *str, int len) {
+  if (buf_len > 0 && len > 0) {
+    memcpy(buf, str, len < buf_len ? len : buf_len);
+  }
+  return len;
 }
 
 int json_emit(char *s, int s_len, const char *fmt, ...) {
-  const char *end = s + s_len;
+  const char *end = s + s_len, *str;
+  size_t len;
   va_list ap;
 
   va_start(ap, fmt);
@@ -414,19 +419,23 @@ int json_emit(char *s, int s_len, const char *fmt, ...) {
         s += json_emit_double(s, end - s, va_arg(ap, double));
         break;
       case 's':
-        s += json_emit_quoted_str(s, end - s, va_arg(ap, char *));
+        str = va_arg(ap, char *);
+        len = va_arg(ap, size_t);
+        s += json_emit_quoted_str(s, end - s, str, len);
         break;
       case 'S':
-        s += json_emit_unquoted_str(s, end - s, va_arg(ap, char *));
+        str = va_arg(ap, char *);
+        len = va_arg(ap, size_t);
+        s += json_emit_unquoted_str(s, end - s, str, len);
         break;
       case 'T':
-        s += json_emit_unquoted_str(s, end - s, "true");
+        s += json_emit_unquoted_str(s, end - s, "true", 4);
         break;
       case 'F':
-        s += json_emit_unquoted_str(s, end - s, "false");
+        s += json_emit_unquoted_str(s, end - s, "false", 5);
         break;
       case 'N':
-        s += json_emit_unquoted_str(s, end - s, "null");
+        s += json_emit_unquoted_str(s, end - s, "null", 4);
         break;
       default:
         return 0;

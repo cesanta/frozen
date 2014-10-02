@@ -184,8 +184,8 @@ static const char *test_emit_overflow(void) {
   char buf[1000];
 
   memset(buf, 0, sizeof(buf));
-  ASSERT(json_emit_unquoted_str(buf, 0, "hi") == 2);
-  ASSERT(json_emit_quoted_str(buf, 0, "hi") == 4);
+  ASSERT(json_emit_unquoted_str(buf, 0, "hi", 2) == 2);
+  ASSERT(json_emit_quoted_str(buf, 0, "hi", 2) == 4);
   ASSERT(buf[0] == '\0');
 
   return NULL;
@@ -194,7 +194,7 @@ static const char *test_emit_overflow(void) {
 static const char *test_emit_escapes(void) {
   const char *s4 = "\"\\\"\\\\\\b\\f\\n\\r\\t\"";
   char buf[1000];
-  ASSERT(json_emit_quoted_str(buf, sizeof(buf), "\"\\\b\f\n\r\t") > 0);
+  ASSERT(json_emit_quoted_str(buf, sizeof(buf), "\"\\\b\f\n\r\t", 7) > 0);
   ASSERT(strcmp(buf, s4) == 0);
   return NULL;
 }
@@ -203,15 +203,15 @@ static const char *test_emit(void) {
   char buf[1000], *p = buf;
   const char *s5 = "{\"foo\":[-123,1.23,true]}";
 
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "{");
-  p += json_emit_quoted_str(p, &buf[sizeof(buf)] - p, "foo");
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ":[");
+  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "{", 1);
+  p += json_emit_quoted_str(p, &buf[sizeof(buf)] - p, "foo", 3);
+  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ":[", 2);
   p += json_emit_long(p, &buf[sizeof(buf)] - p, -123);
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ",");
+  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ",", 1);
   p += json_emit_double(p, &buf[sizeof(buf)] - p, 1.23);
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ",");
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "true");
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "]}");
+  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ",", 1);
+  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "true", 4);
+  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "]}", 2);
   ASSERT(strcmp(buf, s5) == 0);
   ASSERT(p < &buf[sizeof(buf)]);
 
@@ -220,7 +220,9 @@ static const char *test_emit(void) {
   ASSERT(json_emit(buf, 4, "{S:i}", "a", 12345) < 0);
   ASSERT(json_emit(buf, sizeof(buf), "{S:d}", "a", 12345) == 0);
 
-  ASSERT(json_emit(buf, sizeof(buf), "{s:[i,T, F,N]}", "foo", (long) -7) > 0);
+  ASSERT(json_emit(buf, sizeof(buf), "{s:[i,T, F,N]}", "foo",
+         (long) 3, (long) -7) > 0);
+  printf("[%s]\n", buf);
   ASSERT(strcmp(buf, "{\"foo\":[-7,true, false,null]}") == 0);
 
   return NULL;
