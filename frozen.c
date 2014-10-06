@@ -418,15 +418,23 @@ int json_emit(char *s, int s_len, const char *fmt, ...) {
       case 'f':
         s += json_emit_double(s, end - s, va_arg(ap, double));
         break;
-      case 's':
+      case 'v':
         str = va_arg(ap, char *);
         len = va_arg(ap, size_t);
         s += json_emit_quoted_str(s, end - s, str, len);
         break;
-      case 'S':
+      case 'V':
         str = va_arg(ap, char *);
         len = va_arg(ap, size_t);
         s += json_emit_unquoted_str(s, end - s, str, len);
+        break;
+      case 's':
+        str = va_arg(ap, char *);
+        s += json_emit_quoted_str(s, end - s, str, strlen(str));
+        break;
+      case 'S':
+        str = va_arg(ap, char *);
+        s += json_emit_unquoted_str(s, end - s, str, strlen(str));
         break;
       case 'T':
         s += json_emit_unquoted_str(s, end - s, "true", 4);

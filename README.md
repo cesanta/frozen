@@ -140,10 +140,12 @@ Characters allowed in `format` string:
 are appended to the output buffer as-is  
 `i`: argument must be an `long` value, outputs number  
 `f`: argument must be a `double` value, outputs number  
-`s`: arguments must be a `char *` value, followed by `size_t` value,
+`v`: arguments must be a `char *` value, followed by `size_t` value,
      outputs quoted string  
-`S`: arguments must be a `char *` value, followed by `size_t` value,
+`V`: arguments must be a `char *` value, followed by `size_t` value,
      outputs unquoted string  
+`s`: arguments must be a `\0`-terminated `char *` value, outputs quoted string  
+`S`: arguments must be a `\0`-terminated `char *` value, outputs unquoted string  
 `N`: outputs `null`  
 `T`: outputs `true`  
 `F`: outputs `false`  
@@ -176,8 +178,7 @@ are appended to the output buffer as-is
 ## Example: generating JSON string `{ "foo": [-123, true, false, null] }`
 
     char buf[1000];
-    json_emit(buf, sizeof(buf), "{ s: [i, T, F, N] }",
-              "foo", (size_t) 3, (long) -123);
+    json_emit(buf, sizeof(buf), "{ s: [i, T, F, N] }", "foo", (long) -123);
 
 # License
 
