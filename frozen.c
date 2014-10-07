@@ -321,8 +321,7 @@ static int path_part_len(const char *p) {
   return i;
 }
 
-const struct json_token *find_json_token(const struct json_token *toks,
-                                         const char *path) {
+struct json_token *find_json_token(struct json_token *toks, const char *path) {
   while (path != 0 && path[0] != '\0') {
     int i, ind2 = 0, ind = -1, skip = 2, n = path_part_len(path);
     if (path[0] == '[') {
@@ -400,7 +399,7 @@ int json_emit_unquoted_str(char *buf, int buf_len, const char *str, int len) {
 }
 
 int json_emit_va(char *s, int s_len, const char *fmt, va_list ap) {
-  const char *end = s + s_len, *str;
+  const char *end = s + s_len, *str, *orig = s;
   size_t len;
 
   while (*fmt != '\0') {
@@ -451,7 +450,7 @@ int json_emit_va(char *s, int s_len, const char *fmt, va_list ap) {
 
   if (s < end) *s = '\0';
 
-  return end - s;
+  return s - orig;
 }
 
 int json_emit(char *buf, int buf_len, const char *fmt, ...) {
