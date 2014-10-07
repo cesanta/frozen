@@ -22,6 +22,8 @@
 extern "C" {
 #endif // __cplusplus
 
+#include <stdarg.h>
+
 enum json_type {
   JSON_TYPE_EOF     = 0,      // End of parsed tokens marker
   JSON_TYPE_STRING  = 1,
@@ -58,6 +60,7 @@ int json_emit_double(char *buf, int buf_len, double value);
 int json_emit_quoted_str(char *buf, int buf_len, const char *str, int len);
 int json_emit_unquoted_str(char *buf, int buf_len, const char *str, int len);
 int json_emit(char *buf, int buf_len, const char *fmt, ...);
+int json_emit_va(char *buf, int buf_len, const char *fmt, va_list);
 
 #ifdef __cplusplus
 }

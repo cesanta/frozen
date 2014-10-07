@@ -399,12 +399,10 @@ int json_emit_unquoted_str(char *buf, int buf_len, const char *str, int len) {
   return len;
 }
 
-int json_emit(char *s, int s_len, const char *fmt, ...) {
+int json_emit_va(char *s, int s_len, const char *fmt, va_list ap) {
   const char *end = s + s_len, *str;
   size_t len;
-  va_list ap;
 
-  va_start(ap, fmt);
   while (*fmt != '\0') {
     switch (*fmt) {
       case '[': case ']': case '{': case '}': case ',': case ':':
@@ -450,9 +448,19 @@ int json_emit(char *s, int s_len, const char *fmt, ...) {
     }
     fmt++;
   }
-  va_end(ap);
 
   if (s < end) *s = '\0';
 
   return end - s;
+}
+
+int json_emit(char *buf, int buf_len, const char *fmt, ...) {
+  int len;
+  va_list ap;
+
+  va_start(ap, fmt);
+  len = json_emit_va(buf, buf_len, fmt, ap);
+  va_end(ap);
+
+  return len;
 }
