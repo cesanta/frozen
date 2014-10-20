@@ -1,21 +1,23 @@
-// Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
-// Copyright (c) 2013 Cesanta Software Limited
-// All rights reserved
-//
-// This library is dual-licensed: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License version 2 as
-// published by the Free Software Foundation. For the terms of this
-// license, see <http://www.gnu.org/licenses/>.
-//
-// You are free to use this library under the terms of the GNU General
-// Public License, but WITHOUT ANY WARRANTY; without even the implied
-// warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// See the GNU General Public License for more details.
-//
-// Alternatively, you can license this library under a commercial
-// license, as set out in <http://cesanta.com/products.html>.
+/*
+ * Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
+ * Copyright (c) 2013 Cesanta Software Limited
+ * All rights reserved
+ *
+ * This library is dual-licensed: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation. For the terms of this
+ * license, see <http: *www.gnu.org/licenses/>.
+ *
+ * You are free to use this library under the terms of the GNU General
+ * Public License, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * Alternatively, you can license this library under a commercial
+ * license, as set out in <http://cesanta.com/products.html>.
+ */
 
-#define _CRT_SECURE_NO_WARNINGS // Disable deprecation warning in VS2005+
+#define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -124,7 +126,7 @@ static int capture_len(struct frozen *f, int token_index, const char *ptr) {
   return 0;
 }
 
-// identifier = letter { letter | digit | '_' }
+/* identifier = letter { letter | digit | '_' } */
 static int parse_identifier(struct frozen *f) {
   EXPECT(is_alpha(cur(f)), JSON_STRING_INVALID);
   TRY(capture_ptr(f, f->cur, JSON_TYPE_STRING));
@@ -145,7 +147,7 @@ static int get_utf8_char_len(unsigned char ch) {
   }
 }
 
-// string = '"' { quoted_printable_chars } '"'
+/* string = '"' { quoted_printable_chars } '"' */
 static int parse_string(struct frozen *f) {
   int n, ch = 0, len = 0;
   TRY(test_and_skip(f, '"'));
@@ -153,8 +155,7 @@ static int parse_string(struct frozen *f) {
   for (; f->cur < f->end; f->cur += len) {
     ch = * (unsigned char *) f->cur;
     len = get_utf8_char_len((unsigned char) ch);
-    //printf("[%c] [%d]\n", ch, len);
-    EXPECT(ch >= 32 && len > 0, JSON_STRING_INVALID);  // No control chars
+    EXPECT(ch >= 32 && len > 0, JSON_STRING_INVALID);  /* No control chars */
     EXPECT(len < left(f), JSON_STRING_INCOMPLETE);
     if (ch == '\\') {
       EXPECT((n = get_escape_len(f->cur + 1, left(f))) > 0, n);
@@ -168,7 +169,7 @@ static int parse_string(struct frozen *f) {
   return ch == '"' ? 0 : JSON_STRING_INCOMPLETE;
 }
 
-// number = [ '-' ] digit+ [ '.' digit+ ] [ ['e'|'E'] ['+'|'-'] digit+ ]
+/* number = [ '-' ] digit+ [ '.' digit+ ] [ ['e'|'E'] ['+'|'-'] digit+ ] */
 static int parse_number(struct frozen *f) {
   int ch = cur(f);
   TRY(capture_ptr(f, f->cur, JSON_TYPE_NUMBER));
@@ -194,7 +195,7 @@ static int parse_number(struct frozen *f) {
   return 0;
 }
 
-// array = '[' [ value { ',' value } ] ']'
+/* array = '[' [ value { ',' value } ] ']' */
 static int parse_array(struct frozen *f) {
   int ind;
   TRY(test_and_skip(f, '['));
@@ -229,7 +230,7 @@ static int expect(struct frozen *f, const char *s, int len, enum json_type t) {
   return 0;
 }
 
-// value = 'null' | 'true' | 'false' | number | string | array | object
+/* value = 'null' | 'true' | 'false' | number | string | array | object */
 static int parse_value(struct frozen *f) {
   int ch = cur(f);
 
@@ -251,7 +252,7 @@ static int parse_value(struct frozen *f) {
   return 0;
 }
 
-// key = identifier | string
+/* key = identifier | string */
 static int parse_key(struct frozen *f) {
   int ch = cur(f);
 #if 0
@@ -267,7 +268,7 @@ static int parse_key(struct frozen *f) {
   return 0;
 }
 
-// pair = key ':' value
+/* pair = key ':' value */
 static int parse_pair(struct frozen *f) {
   TRY(parse_key(f));
   TRY(test_and_skip(f, ':'));
@@ -275,7 +276,7 @@ static int parse_pair(struct frozen *f) {
   return 0;
 }
 
-// object = '{' pair { ',' pair } '}'
+/* object = '{' pair { ',' pair } '}' */
 static int parse_object(struct frozen *f) {
   int ind;
   TRY(test_and_skip(f, '{'));
@@ -299,15 +300,29 @@ static int doit(struct frozen *f) {
   return 0;
 }
 
-// json = object
+/* json = object */
 int parse_json(const char *s, int s_len, struct json_token *arr, int arr_len) {
-  struct frozen frozen = { s + s_len, s, arr, arr_len, 0, 0 };
+  struct frozen frozen;
+
+  memset(&frozen, 0, sizeof(frozen));
+  frozen.end = s + s_len;
+  frozen.cur = s;
+  frozen.tokens = arr;
+  frozen.max_tokens = arr_len;
+
   TRY(doit(&frozen));
+
   return frozen.cur - s;
 }
 
 struct json_token *parse_json2(const char *s, int s_len) {
-  struct frozen frozen = { s + s_len, s, NULL, 0, 0, 1 };
+  struct frozen frozen;
+
+  memset(&frozen, 0, sizeof(frozen));
+  frozen.end = s + s_len;
+  frozen.cur = s;
+  frozen.do_realloc = 1;
+
   if (doit(&frozen) < 0) {
     FROZEN_FREE((void *) frozen.tokens);
     frozen.tokens = NULL;
@@ -332,11 +347,11 @@ struct json_token *find_json_token(struct json_token *toks, const char *path) {
         ind += path[n] - '0';
       }
       if (path[n++] != ']') return 0;
-      skip = 1;  // In objects, we skip 2 elems while iterating, in arrays 1.
+      skip = 1;  /* In objects, we skip 2 elems while iterating, in arrays 1. */
     } else if (toks->type != JSON_TYPE_OBJECT) return 0;
     toks++;
     for (i = 0; i < toks[-1].num_desc; i += skip, ind2++) {
-      // ind == -1 indicated that we're iterating an array, not object
+      /* ind == -1 indicated that we're iterating an array, not object */
       if (ind == -1 && toks[i].type != JSON_TYPE_STRING) return 0;
       if (ind2 == ind ||
           (ind == -1 && toks[i].len == n && compare(path, toks[i].ptr, n))) {
@@ -450,7 +465,7 @@ int json_emit_va(char *s, int s_len, const char *fmt, va_list ap) {
     fmt++;
   }
 
-  // Best-effort to 0-terminate generated string
+  /* Best-effort to 0-terminate generated string */
   if (s < end) {
     *s = '\0';
   }
