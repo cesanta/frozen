@@ -73,7 +73,7 @@ static const char *test_errors(void) {
   };
   static const struct { const char *str; int expected_len; } success_tests[] = {
     { "{}", 2 },
-    // 2, 3, 4 byte utf-8 chars
+    /* 2, 3, 4 byte utf-8 chars */
     { "{a:\"\xd0\xb1\xe3\x81\xaf\xf0\xa2\xb3\x82\"}", 15 },
     { "{a:\"\\u0006\"}", 12 },
     { " { } ", 4 },
@@ -206,6 +206,7 @@ static const char *test_emit_escapes(void) {
 static const char *test_emit(void) {
   char buf[1000], *p = buf;
   const char *s5 = "{\"foo\":[-123,1.23,true]}";
+  const char *s6 = "{\"foo\":[-7,true, false,null]}";
 
   p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "{", 1);
   p += json_emit_quoted_str(p, &buf[sizeof(buf)] - p, "foo", 3);
@@ -216,17 +217,19 @@ static const char *test_emit(void) {
   p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ",", 1);
   p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "true", 4);
   p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "]}", 2);
+
   ASSERT(strcmp(buf, s5) == 0);
   ASSERT(p < &buf[sizeof(buf)]);
 
   ASSERT(json_emit(buf, sizeof(buf), "{v:[i,f,V]}",
          "foo", 3, (long) -123, 1.23, "true", 4) > 0);
+  ASSERT(strcmp(buf, s5) == 0);
+
   ASSERT(json_emit(buf, 4, "{S:i}", "a", 12345) > 4);
   ASSERT(json_emit(buf, sizeof(buf), "{S:d}", "a", 12345) == 0);
 
   ASSERT(json_emit(buf, sizeof(buf), "{s:[i,T, F,N]}", "foo", (long) -7) > 0);
-  printf("[%s]\n", buf);
-  ASSERT(strcmp(buf, "{\"foo\":[-7,true, false,null]}") == 0);
+  ASSERT(strcmp(buf, s6) == 0);
 
   return NULL;
 }

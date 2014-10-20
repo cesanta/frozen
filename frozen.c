@@ -373,11 +373,17 @@ struct json_token *find_json_token(struct json_token *toks, const char *path) {
 }
 
 int json_emit_long(char *buf, int buf_len, long int value) {
-  return snprintf(buf, buf_len > 0 ? buf_len : 0, "%ld", value);
+  char tmp[20];
+  int n = snprintf(tmp, sizeof(tmp), "%ld", value);
+  strncpy(buf, tmp, buf_len > 0 ? buf_len : 0);
+  return n;
 }
 
 int json_emit_double(char *buf, int buf_len, double value) {
-  return snprintf(buf, buf_len > 0 ? buf_len : 0, "%g", value);
+  char tmp[20];
+  int n = snprintf(tmp, sizeof(tmp), "%g", value);
+  strncpy(buf, tmp, buf_len > 0 ? buf_len : 0);
+  return n;
 }
 
 int json_emit_quoted_str(char *s, int s_len, const char *str, int len) {
@@ -401,14 +407,20 @@ int json_emit_quoted_str(char *s, int s_len, const char *str, int len) {
     }
   }
   EMIT('"');
-  if (s < end) *s = '\0';
+  if (s < end) {
+    *s = '\0';
+  }
 
   return s - begin;
 }
 
 int json_emit_unquoted_str(char *buf, int buf_len, const char *str, int len) {
   if (buf_len > 0 && len > 0) {
-    memcpy(buf, str, len < buf_len ? len : buf_len);
+    int n = len < buf_len ? len : buf_len;
+    memcpy(buf, str, n);
+    if (n < buf_len) {
+      buf[n] = '\0';
+    }
   }
   return len;
 }
