@@ -180,6 +180,20 @@ are appended to the output buffer as-is
     char buf[1000];
     json_emit(buf, sizeof(buf), "{ s: [i, T, F, N] }", "foo", (long) -123);
 
+## Compile for mac 
+
+this project depend on lcov, please install it before
+
+	# brew install lcov
+	
+execute all test && coverage 
+
+	make all
+	
+then open the html file in browser
+
+	make open
+	
 # License
 
 Frozen is released under
