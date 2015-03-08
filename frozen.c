@@ -76,6 +76,12 @@ static int test_and_skip(struct frozen *f, int expected) {
   return ch == END_OF_STRING ? JSON_STRING_INCOMPLETE : JSON_STRING_INVALID;
 }
 
+static int test_no_skip(struct frozen *f, int expected) {
+  int ch = cur(f);
+  if (ch == expected) { return 0; }
+  return ch == END_OF_STRING ? JSON_STRING_INCOMPLETE : JSON_STRING_INVALID;
+}
+
 static int is_alpha(int ch) {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 }
@@ -292,9 +298,19 @@ static int parse_object(struct frozen *f) {
 }
 
 static int doit(struct frozen *f) {
+  int ret = 0;
+    
   if (f->cur == 0 || f->end < f->cur) return JSON_STRING_INVALID;
   if (f->end == f->cur) return JSON_STRING_INCOMPLETE;
-  TRY(parse_object(f));
+
+  if (0 == (ret = test_no_skip(f, '{'))) {
+      TRY(parse_object(f));
+  } else if (0 == (ret = test_no_skip(f, '['))) {
+      TRY(parse_array(f));
+  } else {
+      return ret;
+  }
+  
   TRY(capture_ptr(f, f->cur, JSON_TYPE_EOF));
   capture_len(f, f->num_tokens, f->cur);
   return 0;

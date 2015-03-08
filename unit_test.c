@@ -48,7 +48,7 @@
 
 static int static_num_tests = 0;
 
-static int cmp_token(const struct json_token *tok, const char *str, int type) {
+static int cmp_token(const struct json_token *tok, const char *str, enum json_type type) {
 #if 0
   printf("[%.*s] [%s]\n", tok->len, tok->ptr, str);
 #endif
@@ -92,6 +92,8 @@ static const char *test_errors(void) {
     { "{a:1,b:2} xxxx", 9 },
     { "{a:1,b:{},c:[{}]} xxxx", 17 },
     { "{a:true,b:[false,null]} xxxx", 23 },
+    { "[1.23, 3, 5]", 12 },
+    { "[13, {\"a\":\"hi there\"}, 5]", 25 },
     { NULL, 0 }
   };
   const char *s1 = " { a: 1, b: \"hi there\", c: true, d: false, "
