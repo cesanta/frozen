@@ -180,16 +180,17 @@ are appended to the output buffer as-is
     char buf[1000];
     json_emit(buf, sizeof(buf), "{ s: [i, T, F, N] }", "foo", (long) -123);
 
+# Contributions
+
+People who have agreed to the
+[Cesanta CLA](http://cesanta.com/contributors_la.html)
+can make contributions. Note that the CLA isn't a copyright
+_assigment_ but rather a copyright _license_.
+You retain the copyright on your contributions.
+
 # License
 
 Frozen is released under
 [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
 Businesses have an option to get non-restrictive, royalty-free commercial
-license and professional support from
-[Cesanta Software](http://cesanta.com).
-
-[Super Light DNS Resolver](https://github.com/cesanta/sldr),
-[Super Light Regexp Library](https://github.com/cesanta/slre),
-[Mongoose web server](https://github.com/cesanta/mongoose)
-are other projects by Cesanta Software, developed with the same philosophy
-of functionality and simplicity.
+license and professional support from [Cesanta](http://cesanta.com).
