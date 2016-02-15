@@ -32,91 +32,97 @@
 #include <stdio.h>
 #include <string.h>
 
-#define FAIL(str, line) do {                    \
-  printf("Fail on line %d: [%s]\n", line, str); \
-  return str;                                   \
-} while (0)
+#define FAIL(str, line)                           \
+  do {                                            \
+    printf("Fail on line %d: [%s]\n", line, str); \
+    return str;                                   \
+  } while (0)
 
-#define ASSERT(expr) do {                       \
-  static_num_tests++;                           \
-  if (!(expr)) FAIL(#expr, __LINE__);           \
-} while (0)
+#define ASSERT(expr)                    \
+  do {                                  \
+    static_num_tests++;                 \
+    if (!(expr)) FAIL(#expr, __LINE__); \
+  } while (0)
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#define RUN_TEST(test) do { const char *msg = test(); \
-  if (msg) return msg; } while (0)
+#define RUN_TEST(test)        \
+  do {                        \
+    const char *msg = test(); \
+    if (msg) return msg;      \
+  } while (0)
 
 static int static_num_tests = 0;
 
-static int cmp_token(const struct json_token *tok, const char *str, enum json_type type) {
+static int cmp_token(const struct json_token *tok, const char *str,
+                     enum json_type type) {
 #if 0
   printf("[%.*s] [%s]\n", tok->len, tok->ptr, str);
 #endif
   return tok->type == type && (int) strlen(str) == tok->len &&
-    memcmp(tok->ptr, str, tok->len) == 0;
+         memcmp(tok->ptr, str, tok->len) == 0;
 }
 
 static const char *test_errors(void) {
   struct json_token ar[100];
   int size = ARRAY_SIZE(ar);
   static const char *invalid_tests[] = {
-    "1", "a:3", "\x01", "{:", " { 1", "{a:\"\n\"}", "{a:1x}", "{a:1e}",
-    "{a:.1}", "{a:0.}", "{a:0.e}", "{a:0.e1}", "{a:0.1e}", "{a:\"\\u\" } ",
-    "{a:\"\\yx\"}", "{a:\"\\u111r\"}",
-    NULL
-  };
+      "1", "a:3", "\x01", "{:", " { 1", "{a:\"\n\"}", "{a:1x}", "{a:1e}",
+      "{a:.1}", "{a:0.}", "{a:0.e}", "{a:0.e1}", "{a:0.1e}", "{a:\"\\u\" } ",
+      "{a:\"\\yx\"}", "{a:\"\\u111r\"}", NULL};
   static const char *incomplete_tests[] = {
-    "", " \r\n\t", "{", " { a", "{a:", "{a:\"", " { a : \"xx", "{a:12",
-    "{a:\"\\uf", "{a:\"\\uff", "{a:\"\\ufff", "{a:\"\\uffff",
-    "{a:\"\\uffff\"", "{a:\"\\uffff\" ,", "{a:n", "{a:nu", "{a:nul", "{a:null",
-    NULL
-  };
-  static const struct { const char *str; int expected_len; } success_tests[] = {
-    { "{}", 2 },
-    /* 2, 3, 4 byte utf-8 chars */
-    { "{a:\"\xd0\xb1\xe3\x81\xaf\xf0\xa2\xb3\x82\"}", 15 },
-    { "{a:\"\\u0006\"}", 12 },
-    { " { } ", 4 },
-    { "{a:1}", 5 },
-    { "{a:1.23}", 8 },
-    { "{a:1e23}", 8 },
-    { "{a:1.23e2}", 10 },
-    { "{a:-123}", 8 },
-    { "{a:-1.3}", 8 },
-    { "{a:-1.3e-2}", 11},
-    { "{a:\"\"}", 6 },
-    { "{a:\" \\n\\t\\r\"}", 13 },
-    { " {a:[1]} 123456", 8 },
-    { " {a:[]} 123456", 7 },
-    { " {a:[1,2]} 123456", 10 },
-    { "{a:1,b:2} xxxx", 9 },
-    { "{a:1,b:{},c:[{}]} xxxx", 17 },
-    { "{a:true,b:[false,null]} xxxx", 23 },
-    { "[1.23, 3, 5]", 12 },
-    { "[13, {\"a\":\"hi there\"}, 5]", 25 },
-    { NULL, 0 }
-  };
-  const char *s1 = " { a: 1, b: \"hi there\", c: true, d: false, "
-    " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } } ";
-  const char *s2 = "{ a: 1, b: \"hi there\", c: true, d: false, "
-    " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } }";
+      "", " \r\n\t", "{", " { a", "{a:", "{a:\"", " { a : \"xx", "{a:12",
+      "{a:\"\\uf", "{a:\"\\uff", "{a:\"\\ufff", "{a:\"\\uffff",
+      "{a:\"\\uffff\"", "{a:\"\\uffff\" ,", "{a:n", "{a:nu", "{a:nul",
+      "{a:null", NULL};
+  static const struct {
+    const char *str;
+    int expected_len;
+  } success_tests[] = {{"{}", 2},
+                       /* 2, 3, 4 byte utf-8 chars */
+                       {"{a:\"\xd0\xb1\xe3\x81\xaf\xf0\xa2\xb3\x82\"}", 15},
+                       {"{a:\"\\u0006\"}", 12},
+                       {" { } ", 4},
+                       {"{a:1}", 5},
+                       {"{a:1.23}", 8},
+                       {"{a:1e23}", 8},
+                       {"{a:1.23e2}", 10},
+                       {"{a:-123}", 8},
+                       {"{a:-1.3}", 8},
+                       {"{a:-1.3e-2}", 11},
+                       {"{a:\"\"}", 6},
+                       {"{a:\" \\n\\t\\r\"}", 13},
+                       {" {a:[1]} 123456", 8},
+                       {" {a:[]} 123456", 7},
+                       {" {a:[1,2]} 123456", 10},
+                       {"{a:1,b:2} xxxx", 9},
+                       {"{a:1,b:{},c:[{}]} xxxx", 17},
+                       {"{a:true,b:[false,null]} xxxx", 23},
+                       {"[1.23, 3, 5]", 12},
+                       {"[13, {\"a\":\"hi there\"}, 5]", 25},
+                       {NULL, 0}};
+  const char *s1 =
+      " { a: 1, b: \"hi there\", c: true, d: false, "
+      " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } } ";
+  const char *s2 =
+      "{ a: 1, b: \"hi there\", c: true, d: false, "
+      " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } }";
   const char *s3 = "{ \"1\": [], h: [ 7 ] }";
   int i;
 
   ASSERT(parse_json(NULL, 0, NULL, 0) == JSON_STRING_INVALID);
   for (i = 0; invalid_tests[i] != NULL; i++) {
-    ASSERT(parse_json(invalid_tests[i], strlen(invalid_tests[i]),
-                      ar, size) == JSON_STRING_INVALID);
+    ASSERT(parse_json(invalid_tests[i], strlen(invalid_tests[i]), ar, size) ==
+           JSON_STRING_INVALID);
   }
 
   for (i = 0; incomplete_tests[i] != NULL; i++) {
-    ASSERT(parse_json(incomplete_tests[i], strlen(incomplete_tests[i]),
-                      ar, size) == JSON_STRING_INCOMPLETE);
+    ASSERT(parse_json(incomplete_tests[i], strlen(incomplete_tests[i]), ar,
+                      size) == JSON_STRING_INCOMPLETE);
   }
 
   for (i = 0; success_tests[i].str != NULL; i++) {
-    ASSERT(parse_json(success_tests[i].str, strlen(success_tests[i].str),
-                      ar, size) == success_tests[i].expected_len);
+    ASSERT(parse_json(success_tests[i].str, strlen(success_tests[i].str), ar,
+                      size) == success_tests[i].expected_len);
   }
 
   ASSERT(parse_json("{}", 2, ar, 1) == JSON_TOKEN_ARRAY_TOO_SMALL);
@@ -223,8 +229,8 @@ static const char *test_emit(void) {
   ASSERT(strcmp(buf, s5) == 0);
   ASSERT(p < &buf[sizeof(buf)]);
 
-  ASSERT(json_emit(buf, sizeof(buf), "{v:[i,f,V]}",
-         "foo", 3, (long) -123, 1.23, "true", 4) > 0);
+  ASSERT(json_emit(buf, sizeof(buf), "{v:[i,f,V]}", "foo", 3, (long) -123, 1.23,
+                   "true", 4) > 0);
   ASSERT(strcmp(buf, s5) == 0);
 
   ASSERT(json_emit(buf, 4, "{S:i}", "a", 12345) > 4);
@@ -240,10 +246,9 @@ static const char *test_nested(void) {
   struct json_token ar[100];
   const char *s = "{ a : [ [1, 2, { b : 2 } ] ] }";
   enum json_type types[] = {
-    JSON_TYPE_OBJECT, JSON_TYPE_STRING, JSON_TYPE_ARRAY, JSON_TYPE_ARRAY,
-    JSON_TYPE_NUMBER, JSON_TYPE_NUMBER, JSON_TYPE_OBJECT, JSON_TYPE_STRING,
-    JSON_TYPE_NUMBER, JSON_TYPE_EOF
-  };
+      JSON_TYPE_OBJECT, JSON_TYPE_STRING, JSON_TYPE_ARRAY,  JSON_TYPE_ARRAY,
+      JSON_TYPE_NUMBER, JSON_TYPE_NUMBER, JSON_TYPE_OBJECT, JSON_TYPE_STRING,
+      JSON_TYPE_NUMBER, JSON_TYPE_EOF};
   int i, ar_size = ARRAY_SIZE(ar), types_size = ARRAY_SIZE(types);
 
   ASSERT(parse_json(s, strlen(s), ar, ar_size) == (int) strlen(s));
