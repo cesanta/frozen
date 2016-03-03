@@ -188,9 +188,12 @@ can make contributions. Note that the CLA isn't a copyright
 _assigment_ but rather a copyright _license_.
 You retain the copyright on your contributions.
 
-# License
+# Licensing
 
-Frozen is released under
-[GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
-Businesses have an option to get non-restrictive, royalty-free commercial
-license and professional support from [Cesanta](http://cesanta.com).
+Frozen is released under commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses. 
+
+Commercial Projects: 
+Once your project becomes commercialised GPLv2 licensing dictates that you need to either open your source fully or purchase a commercial license. Cesanta offer full, royalty-free commercial licenses without any GPL restrictions. If your needs require a custom license, we’d be happy to work on a solution with you. [Contact us for pricing.] (https://www.cesanta.com/contact) 
+
+Prototyping: 
+While your project is still in prototyping stage and not for sale, you can use Frozen’s open source code without license restrictions. 
