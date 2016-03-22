@@ -1,0 +1,7 @@
+{
+  "items": [
+    { "type": "markdown", "name": "intro.md" },
+    { "type": "markdown", "name": "conf-params.md" },
+    { "type": "markdown", "name": "gen-json.md" }
+  ]
+}

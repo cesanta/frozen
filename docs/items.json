@@ -1,0 +1,9 @@
+{
+  "items": [
+    { "type": "section", "name": "features" },
+    { "type": "section", "name": "how-to-use" },
+    { "type": "section", "name": "api" },
+    { "type": "section", "name": "examples" },
+    { "type": "section", "name": "license" }
+  ]
+}
