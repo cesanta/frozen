@@ -84,42 +84,21 @@ that points to number `"1"`.
 Return: pointer to the found token, or NULL on failure.
 
 ```c
-int json_emit_long(char *buf, int buf_len, long value);
-int json_emit_double(char *buf, int buf_len, double value);
-int json_emit_quoted_str(char *buf, int buf_len, const char *str);
-int json_emit_unquoted_str(char *buf, int buf_len, const char *str);
+struct json_out out = JSON_OUT_BUF(buf, len);
+struct json_out out = JSON_OUT_FILE(fp);
+
+typedef int (*json_printf_callback_t)(struct json_out *, va_list *ap);
+
+int json_printf(struct json_out *, const char *fmt, ...);
+int json_vprintf(struct json_out *, const char *fmt, va_list ap);
 ```
+Generate formatted output into a given sting buffer.
+This is a superset of printf() function, with extra format specifiers:
 
-These functions are used to generate JSON string. All of them accept
-a destination buffer and a value to output, and return number of bytes printed.
-Returned value can be bigger then destination buffer size, this is an
-indication of overflow. If there is no overflow, a buffer is guaranteed to
-be nul-terminated. Numbers are printed by `json_emit_double()` and
-`json_emit_int()` functions, strings are printed by `json_emit_quoted_str()`
-function. Values for `null`, `true`, `false`, and characters
-`{`, `}`, `[`, `]`, `,`, `:` are printed by
-`json_emit_raw_str()` function.
+- `%B` print json boolean, `true` or `false`. Accepts an `int`.
+- `%I` print int64_t value. Accepts an `int64_t`.
+- `%Q` print quoted escaped string or `null`. Accepts a `const char *`.
+- `%M` invokes a json_printf_callback_t function. That callback function
+ can consume more parameters.
 
-```c
-    int json_emit(char *buf, int buf_len, const char *format, ...);
-```
-
-A convenience function that generates JSON string using formatted output.
-Characters allowed in `format` string:
-`[`, `]`, `{`, `}`, `,`, `:`, `\r`, `\n`, `\t`, ` `: these characters
-are appended to the output buffer as-is
-
-- `i`: argument must be an `long` value, outputs number  
-- `f`: argument must be a `double` value, outputs number  
-- `v`: arguments must be a `char *` value, followed by `size_t` value, outputs
-  quoted string  
-- `V`: arguments must be a `char *` value, followed by `size_t` value, outputs
-  unquoted string  
-- `s`: arguments must be a `\0`-terminated `char *` value, outputs quoted
-  string  
-- `S`: arguments must be a `\0`-terminated `char *` value, outputs unquoted
-  string  
-- `N`: outputs `null`  
-- `T`: outputs `true`  
-- `F`: outputs `false`  
-
+Return number of bytes printed.

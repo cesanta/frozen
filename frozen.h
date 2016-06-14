@@ -25,6 +25,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
 
 enum json_type {
   JSON_TYPE_EOF = 0, /* End of parsed tokens marker */
@@ -54,12 +56,62 @@ int parse_json(const char *json_string, int json_string_length,
 struct json_token *parse_json2(const char *json_string, int string_length);
 struct json_token *find_json_token(struct json_token *toks, const char *path);
 
-int json_emit_long(char *buf, int buf_len, long value);
-int json_emit_double(char *buf, int buf_len, double value);
-int json_emit_quoted_str(char *buf, int buf_len, const char *str, int len);
-int json_emit_unquoted_str(char *buf, int buf_len, const char *str, int len);
-int json_emit(char *buf, int buf_len, const char *fmt, ...);
-int json_emit_va(char *buf, int buf_len, const char *fmt, va_list);
+/*
+ * JSON generation API.
+ * struct json_out abstracts output, allowing alternative printing plugins.
+ */
+struct json_out {
+  int (*printer)(struct json_out *, const char *str, size_t len);
+  union {
+    struct {
+      char *buf;
+      size_t size;
+      size_t len;
+    } buf;
+    void *data;
+    FILE *fp;
+  } u;
+};
+
+extern int json_printer_buf(struct json_out *, const char *, size_t);
+extern int json_printer_file(struct json_out *, const char *, size_t);
+
+#define JSON_OUT_BUF(buf, len) \
+  {                            \
+    json_printer_buf, {        \
+      { buf, len, 0 }          \
+    }                          \
+  }
+#define JSON_OUT_FILE(fp)   \
+  {                         \
+    json_printer_file, {    \
+      { (void *) fp, 0, 0 } \
+    }                       \
+  }
+
+typedef int (*json_printf_callback_t)(struct json_out *, va_list *ap);
+
+/*
+ * Generate formatted output into a given sting buffer.
+ * This is a superset of printf() function, with extra format specifiers:
+ *  - `%B` print json boolean, `true` or `false`. Accepts an `int`.
+ *  - `%Q` print quoted escaped string or `null`. Accepts a `const char *`.
+ *  - `%M` invokes a json_printf_callback_t function. That callback function
+ *  can consume more parameters.
+ *
+ * Return number of bytes printed. If the return value is bigger then the
+ * supplied buffer, that is an indicator of overflow. In the overflow case,
+ * overflown bytes are not printed.
+ */
+int json_printf(struct json_out *, const char *fmt, ...);
+int json_vprintf(struct json_out *, const char *fmt, va_list ap);
+
+/*
+ * Helper %M callback that prints contiguous C arrays.
+ * Consumes void *array_ptr, size_t array_size, size_t elem_size, char *fmt
+ * Return number of bytes printed.
+ */
+int json_printf_array(struct json_out *, va_list *ap);
 
 #ifdef __cplusplus
 }

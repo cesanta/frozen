@@ -28,8 +28,8 @@
 
 #include "frozen.c"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define FAIL(str, line)                           \
@@ -66,14 +66,30 @@ static const char *test_errors(void) {
   struct json_token ar[100];
   int size = ARRAY_SIZE(ar);
   static const char *invalid_tests[] = {
-      "1", "a:3", "\x01", "{:", " { 1", "{a:\"\n\"}", "{a:1x}", "{a:1e}",
-      "{a:.1}", "{a:0.}", "{a:0.e}", "{a:0.e1}", "{a:0.1e}", "{a:\"\\u\" } ",
-      "{a:\"\\yx\"}", "{a:\"\\u111r\"}", NULL};
-  static const char *incomplete_tests[] = {
-      "", " \r\n\t", "{", " { a", "{a:", "{a:\"", " { a : \"xx", "{a:12",
-      "{a:\"\\uf", "{a:\"\\uff", "{a:\"\\ufff", "{a:\"\\uffff",
-      "{a:\"\\uffff\"", "{a:\"\\uffff\" ,", "{a:n", "{a:nu", "{a:nul",
-      "{a:null", NULL};
+      "1",        "a:3",           "\x01",         "{:",
+      " { 1",     "{a:\"\n\"}",    "{a:1x}",       "{a:1e}",
+      "{a:.1}",   "{a:0.}",        "{a:0.e}",      "{a:0.e1}",
+      "{a:0.1e}", "{a:\"\\u\" } ", "{a:\"\\yx\"}", "{a:\"\\u111r\"}",
+      NULL};
+  static const char *incomplete_tests[] = {"",
+                                           " \r\n\t",
+                                           "{",
+                                           " { a",
+                                           "{a:",
+                                           "{a:\"",
+                                           " { a : \"xx",
+                                           "{a:12",
+                                           "{a:\"\\uf",
+                                           "{a:\"\\uff",
+                                           "{a:\"\\ufff",
+                                           "{a:\"\\uffff",
+                                           "{a:\"\\uffff\"",
+                                           "{a:\"\\uffff\" ,",
+                                           "{a:n",
+                                           "{a:nu",
+                                           "{a:nul",
+                                           "{a:null",
+                                           NULL};
   static const struct {
     const char *str;
     int expected_len;
@@ -192,56 +208,6 @@ static const char *test_config(void) {
   return NULL;
 }
 
-static const char *test_emit_overflow(void) {
-  char buf[1000];
-
-  memset(buf, 0, sizeof(buf));
-  ASSERT(json_emit_unquoted_str(buf, 0, "hi", 2) == 2);
-  ASSERT(json_emit_quoted_str(buf, 0, "hi", 2) == 4);
-  ASSERT(buf[0] == '\0');
-
-  return NULL;
-}
-
-static const char *test_emit_escapes(void) {
-  const char *s4 = "\"\\\"\\\\\\b\\f\\n\\r\\t\"";
-  char buf[1000];
-  ASSERT(json_emit_quoted_str(buf, sizeof(buf), "\"\\\b\f\n\r\t", 7) > 0);
-  ASSERT(strcmp(buf, s4) == 0);
-  return NULL;
-}
-
-static const char *test_emit(void) {
-  char buf[1000], *p = buf;
-  const char *s5 = "{\"foo\":[-123,1.23,true]}";
-  const char *s6 = "{\"foo\":[-7,true, false,null]}";
-
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "{", 1);
-  p += json_emit_quoted_str(p, &buf[sizeof(buf)] - p, "foo", 3);
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ":[", 2);
-  p += json_emit_long(p, &buf[sizeof(buf)] - p, -123);
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ",", 1);
-  p += json_emit_double(p, &buf[sizeof(buf)] - p, 1.23);
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, ",", 1);
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "true", 4);
-  p += json_emit_unquoted_str(p, &buf[sizeof(buf)] - p, "]}", 2);
-
-  ASSERT(strcmp(buf, s5) == 0);
-  ASSERT(p < &buf[sizeof(buf)]);
-
-  ASSERT(json_emit(buf, sizeof(buf), "{v:[i,f,V]}", "foo", 3, (long) -123, 1.23,
-                   "true", 4) > 0);
-  ASSERT(strcmp(buf, s5) == 0);
-
-  ASSERT(json_emit(buf, 4, "{S:i}", "a", 12345) > 4);
-  ASSERT(json_emit(buf, sizeof(buf), "{S:d}", "a", 12345) == 0);
-
-  ASSERT(json_emit(buf, sizeof(buf), "{s:[i,T, F,N]}", "foo", (long) -7) > 0);
-  ASSERT(strcmp(buf, s6) == 0);
-
-  return NULL;
-}
-
 static const char *test_nested(void) {
   struct json_token ar[100];
   const char *s = "{ a : [ [1, 2, { b : 2 } ] ] }";
@@ -272,14 +238,76 @@ static const char *test_realloc(void) {
   return NULL;
 }
 
+static const char *test_json_printf(void) {
+  char buf[200] = "";
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "{\"foo\": 123, \"x\": [false, true], \"y\": \"hi\"}";
+    json_printf(&out, "{%Q: %d, x: [%B, %B], y: %Q}", "foo", 123, 0, -1, "hi");
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    int arr[] = {-2387, 943478};
+    json_printf(&out, "%M", json_printf_array, arr, sizeof(arr), sizeof(arr[0]),
+                "%d");
+    ASSERT(strcmp(buf, "[-2387, 943478]") == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    double arr[] = {9.32156, 3.1415926};
+    json_printf(&out, "%M", json_printf_array, arr, sizeof(arr), sizeof(arr[0]),
+                "%.2lf");
+    ASSERT(strcmp(buf, "[9.32, 3.14]") == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    unsigned short arr[] = {65535, 777};
+    const char *result = "{\"a\": [-1, 777], \"b\": 37}";
+    json_printf(&out, "{a: %M, b: %d}", json_printf_array, arr, sizeof(arr),
+                sizeof(arr[0]), "%hd", 37);
+    printf("==> [%s]\n", buf);
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "{\"a\": \"\\\"\\\\\\r\\nя\\t\\u0002\"}";
+    json_printf(&out, "{a: %Q}", "\"\\\r\nя\t\x02");
+    printf("==> [%s]\n", buf);
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *arr[] = {"hi", "there", NULL};
+    const char *result = "[\"hi\", \"there\", null]";
+    json_printf(&out, "%M", json_printf_array, arr, sizeof(arr), sizeof(arr[0]),
+                "%Q");
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    out.u.buf.size = 3;
+    memset(buf, 0, sizeof(buf));
+    ASSERT(json_printf(&out, "{%d}", 123) == 5);
+    ASSERT(memcmp(buf, "{1\x00\x00\x00", 5) == 0);
+  }
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_errors);
   RUN_TEST(test_config);
-  RUN_TEST(test_emit);
-  RUN_TEST(test_emit_escapes);
-  RUN_TEST(test_emit_overflow);
   RUN_TEST(test_nested);
   RUN_TEST(test_realloc);
+  RUN_TEST(test_json_printf);
   return NULL;
 }
 

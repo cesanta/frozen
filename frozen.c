@@ -19,14 +19,25 @@
 
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005+ */
 
+#include "frozen.h"
+#include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
-#include "frozen.h"
 
 #ifdef _WIN32
 #define snprintf _snprintf
+#define vsnprintf _vsnprintf
+typedef _int64 int64_t;
+#define INT64_FMT "%I64"
+#define UINT64_FMT "%I64"
+#define CONSUME_ARG(ap) (void) va_arg(ap, void *);
+#define va_copy(x, y) x = y
+#else
+#define INT64_FMT "%lld"
+#define UINT64_FMT "%llu"
+#define CONSUME_ARG(ap)
 #endif
 
 #ifndef FROZEN_REALLOC
@@ -433,160 +444,144 @@ struct json_token *find_json_token(struct json_token *toks, const char *path) {
   return 0;
 }
 
-int json_emit_long(char *buf, int buf_len, long int value) {
-  char tmp[20];
-  int n = snprintf(tmp, sizeof(tmp), "%ld", value);
-  strncpy(buf, tmp, buf_len > 0 ? buf_len : 0);
+static int json_encode_string(struct json_out *out, const char *p, size_t len) {
+  size_t i, cl, n = 0;
+  const char *hex_digits = "0123456789abcdef";
+  const char *specials = "btnvfr";
+
+  for (i = 0; i < len; i++) {
+    unsigned char ch = ((unsigned char *) p)[i];
+    if (ch == '"' || ch == '\\') {
+      n += out->printer(out, "\\", 1);
+      n += out->printer(out, p + i, 1);
+    } else if (ch >= '\b' && ch <= '\r') {
+      n += out->printer(out, "\\", 1);
+      n += out->printer(out, &specials[ch - '\b'], 1);
+    } else if (isprint(ch)) {
+      n += out->printer(out, p + i, 1);
+    } else if ((cl = get_utf8_char_len(ch)) == 1) {
+      n += out->printer(out, "\\u00", 4);
+      n += out->printer(out, &hex_digits[(ch >> 4) % 0xf], 1);
+      n += out->printer(out, &hex_digits[ch % 0xf], 1);
+    } else {
+      n += out->printer(out, p + i, cl);
+      i += cl - 1;
+    }
+  }
+
   return n;
 }
 
-int json_emit_double(char *buf, int buf_len, double value) {
-  char tmp[20];
-  int n = snprintf(tmp, sizeof(tmp), "%g", value);
-  strncpy(buf, tmp, buf_len > 0 ? buf_len : 0);
-  return n;
-}
-
-int json_emit_quoted_str(char *s, int s_len, const char *str, int len) {
-  const char *begin = s, *end = s + s_len, *str_end = str + len;
-  char ch;
-
-#define EMIT(x)          \
-  do {                   \
-    if (s < end) *s = x; \
-    s++;                 \
-  } while (0)
-
-  EMIT('"');
-  while (str < str_end) {
-    ch = *str++;
-    switch (ch) {
-      case '"':
-        EMIT('\\');
-        EMIT('"');
-        break;
-      case '\\':
-        EMIT('\\');
-        EMIT('\\');
-        break;
-      case '\b':
-        EMIT('\\');
-        EMIT('b');
-        break;
-      case '\f':
-        EMIT('\\');
-        EMIT('f');
-        break;
-      case '\n':
-        EMIT('\\');
-        EMIT('n');
-        break;
-      case '\r':
-        EMIT('\\');
-        EMIT('r');
-        break;
-      case '\t':
-        EMIT('\\');
-        EMIT('t');
-        break;
-      default:
-        EMIT(ch);
-    }
-  }
-  EMIT('"');
-  if (s < end) {
-    *s = '\0';
-  }
-
-  return s - begin;
-}
-
-int json_emit_unquoted_str(char *buf, int buf_len, const char *str, int len) {
-  if (buf_len > 0 && len > 0) {
-    int n = len < buf_len ? len : buf_len;
-    memcpy(buf, str, n);
-    if (n < buf_len) {
-      buf[n] = '\0';
-    }
+int json_printer_buf(struct json_out *out, const char *buf, size_t len) {
+  size_t avail = out->u.buf.size - out->u.buf.len;
+  size_t n = len < avail ? len : avail;
+  memcpy(out->u.buf.buf + out->u.buf.len, buf, n);
+  out->u.buf.len += n;
+  if (out->u.buf.size > 0) {
+    size_t idx = out->u.buf.len;
+    if (idx >= out->u.buf.size) idx = out->u.buf.size - 1;
+    out->u.buf.buf[idx] = '\0';
   }
   return len;
 }
 
-int json_emit_va(char *s, int s_len, const char *fmt, va_list ap) {
-  const char *end = s + s_len, *str, *orig = s;
-  size_t len;
-
-  while (*fmt != '\0') {
-    switch (*fmt) {
-      case '[':
-      case ']':
-      case '{':
-      case '}':
-      case ',':
-      case ':':
-      case ' ':
-      case '\r':
-      case '\n':
-      case '\t':
-        if (s < end) {
-          *s = *fmt;
-        }
-        s++;
-        break;
-      case 'i':
-        s += json_emit_long(s, end - s, va_arg(ap, long) );
-        break;
-      case 'f':
-        s += json_emit_double(s, end - s, va_arg(ap, double) );
-        break;
-      case 'v':
-        str = va_arg(ap, char *);
-        len = va_arg(ap, size_t);
-        s += json_emit_quoted_str(s, end - s, str, len);
-        break;
-      case 'V':
-        str = va_arg(ap, char *);
-        len = va_arg(ap, size_t);
-        s += json_emit_unquoted_str(s, end - s, str, len);
-        break;
-      case 's':
-        str = va_arg(ap, char *);
-        s += json_emit_quoted_str(s, end - s, str, strlen(str));
-        break;
-      case 'S':
-        str = va_arg(ap, char *);
-        s += json_emit_unquoted_str(s, end - s, str, strlen(str));
-        break;
-      case 'T':
-        s += json_emit_unquoted_str(s, end - s, "true", 4);
-        break;
-      case 'F':
-        s += json_emit_unquoted_str(s, end - s, "false", 5);
-        break;
-      case 'N':
-        s += json_emit_unquoted_str(s, end - s, "null", 4);
-        break;
-      default:
-        return 0;
-    }
-    fmt++;
-  }
-
-  /* Best-effort to 0-terminate generated string */
-  if (s < end) {
-    *s = '\0';
-  }
-
-  return s - orig;
+int json_printer_file(struct json_out *out, const char *buf, size_t len) {
+  return fwrite(buf, 1, len, out->u.fp);
 }
 
-int json_emit(char *buf, int buf_len, const char *fmt, ...) {
-  int len;
+int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
+  int len = 0;
+  const char *quote = "\"", *null = "null";
   va_list ap;
+  va_copy(ap, xap);
 
-  va_start(ap, fmt);
-  len = json_emit_va(buf, buf_len, fmt, ap);
+  while (*fmt != '\0') {
+    if (strchr(":, \r\n\t[]{}", *fmt) != NULL) {
+      len += out->printer(out, fmt, 1);
+      fmt++;
+    } else if (fmt[0] == '%') {
+      char buf[20];
+      size_t skip = 2;
+
+      if (fmt[1] == 'l' && fmt[2] == 'l' && (fmt[3] == 'd' || fmt[3] == 'u')) {
+        int64_t val = va_arg(ap, int64_t);
+        const char *fmt2 = fmt[3] == 'u' ? UINT64_FMT : INT64_FMT;
+        snprintf(buf, sizeof(buf), fmt2, val);
+        len += out->printer(out, buf, strlen(buf));
+      } else if (fmt[1] == 'M') {
+        json_printf_callback_t f = va_arg(ap, json_printf_callback_t);
+        len += f(out, &ap);
+      } else if (fmt[1] == 'B') {
+        int val = va_arg(ap, int);
+        const char *str = val ? "true" : "false";
+        len += out->printer(out, str, strlen(str));
+      } else if (fmt[1] == 'Q') {
+        const char *p = va_arg(ap, char *);
+        if (p == NULL) {
+          len += out->printer(out, null, 4);
+        } else {
+          len += out->printer(out, quote, 1);
+          len += json_encode_string(out, p, strlen(p));
+          len += out->printer(out, quote, 1);
+        }
+      } else {
+        const char *end_of_format_specifier = "sdfFgGlhu.-0123456789";
+        size_t n = strspn(fmt + 1, end_of_format_specifier);
+        char fmt2[20];
+        strncpy(fmt2, fmt, n + 1 > sizeof(fmt2) ? sizeof(fmt2) : n + 1);
+        fmt2[n + 1] = '\0';
+        vsnprintf(buf, sizeof(buf), fmt2, ap);
+        len += out->printer(out, buf, strlen(buf));
+        CONSUME_ARG(ap);
+        skip = n + 1;
+      }
+      fmt += skip;
+    } else if (is_alpha(*fmt)) {
+      len += out->printer(out, quote, 1);
+      while (is_alpha(*fmt)) {
+        len += out->printer(out, fmt, 1);
+        fmt++;
+      }
+      len += out->printer(out, quote, 1);
+    } else {
+      fmt++;
+    }
+  }
   va_end(ap);
 
+  return len;
+}
+
+int json_printf(struct json_out *out, const char *fmt, ...) {
+  int n;
+  va_list ap;
+  va_start(ap, fmt);
+  n = json_vprintf(out, fmt, ap);
+  va_end(ap);
+  return n;
+}
+
+int json_printf_array(struct json_out *out, va_list *ap) {
+  int len = 0;
+  char *arr = va_arg(*ap, char *);
+  size_t i, arr_size = va_arg(*ap, size_t);
+  size_t elem_size = va_arg(*ap, size_t);
+  const char *fmt = va_arg(*ap, char *);
+  len += json_printf(out, "[", 1);
+  for (i = 0; arr != NULL && i < arr_size / elem_size; i++) {
+    union {
+      int64_t i;
+      double d;
+    } val;
+    memcpy(&val, arr + i * elem_size,
+           elem_size > sizeof(val) ? sizeof(val) : elem_size);
+    if (i > 0) len += json_printf(out, ", ");
+    if (strchr(fmt, 'f') != NULL) {
+      len += json_printf(out, fmt, val.d);
+    } else {
+      len += json_printf(out, fmt, val.i);
+    }
+  }
+  len += json_printf(out, "]", 1);
   return len;
 }
