@@ -65,6 +65,7 @@ static int cmp_token(const struct json_token *tok, const char *str,
 static const char *test_errors(void) {
   struct json_token ar[100];
   int size = ARRAY_SIZE(ar);
+  /* clang-format off */
   static const char *invalid_tests[] = {
       "1",        "a:3",           "\x01",         "{:",
       " { 1",     "{a:\"\n\"}",    "{a:1x}",       "{a:1e}",
@@ -90,6 +91,7 @@ static const char *test_errors(void) {
                                            "{a:nul",
                                            "{a:null",
                                            NULL};
+  /* clang-format on */
   static const struct {
     const char *str;
     int expected_len;
@@ -243,6 +245,44 @@ static const char *test_json_printf(void) {
 
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "42";
+    json_printf(&out, "%d", 42);
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+  /* platform specific compatibility where it matters */
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "16045690985373621933 42";
+    json_printf(&out, "%" UINT64_FMT " %d", 0xdeadbeeffee1deadUL, 42);
+    ASSERT(strcmp(buf, result) == 0);
+  }
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "12 42";
+    size_t foo = 12;
+    json_printf(&out, "%" SIZE_T_FMT " %d", foo, 42);
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+  /* people live in the future today, %llu works even on recent windozes */
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "16045690985373621933 42";
+    json_printf(&out, "%llu %d", 0xdeadbeeffee1deadUL, 42);
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "12 42";
+    size_t foo = 12;
+    json_printf(&out, "%zu %d", foo, 42);
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     const char *result = "{\"foo\": 123, \"x\": [false, true], \"y\": \"hi\"}";
     json_printf(&out, "{%Q: %d, x: [%B, %B], y: %Q}", "foo", 123, 0, -1, "hi");
     ASSERT(strcmp(buf, result) == 0);
@@ -302,12 +342,34 @@ static const char *test_json_printf(void) {
   return NULL;
 }
 
+static const char *test_system() {
+  char buf[2020];
+  uint64_t u = 0xdeadbeeffee1dead;
+  int64_t d = (int64_t) u;
+  int res;
+
+  snprintf(buf, sizeof(buf), "%" UINT64_FMT, u);
+  ASSERT(strcmp(buf, "16045690985373621933") == 0);
+
+  snprintf(buf, sizeof(buf), "%" INT64_FMT, d);
+  ASSERT(strcmp(buf, "-2401053088335929683") == 0);
+
+  res = snprintf(buf, 3, "foo");
+  ASSERT(res == 3);
+  ASSERT(buf[0] == 'f');
+  ASSERT(buf[1] == 'o');
+  ASSERT(buf[2] == '\0');
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_errors);
   RUN_TEST(test_config);
   RUN_TEST(test_nested);
   RUN_TEST(test_realloc);
   RUN_TEST(test_json_printf);
+  RUN_TEST(test_system);
   return NULL;
 }
 

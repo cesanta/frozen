@@ -27,18 +27,35 @@
 #include <string.h>
 
 #ifdef _WIN32
-#define snprintf _snprintf
-#define vsnprintf _vsnprintf
-typedef _int64 int64_t;
-#define INT64_FMT "%I64"
-#define UINT64_FMT "%I64"
-#define CONSUME_ARG(ap) (void) va_arg(ap, void *);
-#define va_copy(x, y) x = y
+#define snprintf cs_win_snprintf
+#define vsnprintf cs_win_vsnprintf
+int cs_win_snprintf(char *str, size_t size, const char *format, ...);
+int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap);
+#if _MSC_VER >= 1700
+#include <stdint.h>
 #else
-#define INT64_FMT "%lld"
-#define UINT64_FMT "%llu"
-#define CONSUME_ARG(ap)
+typedef _int64 int64_t;
+typedef unsigned _int64 uint64_t;
 #endif
+#define PRId64 "I64d"
+#define PRIu64 "I64u"
+#if _MSC_VER >= 1310
+#define SIZE_T_FMT "Iu"
+#else
+#define SIZE_T_FMT "u"
+#endif
+#define va_copy(x, y) x = y
+#else /* _WIN32 */
+/* <inttypes.h> wants this for C++ */
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+#include <inttypes.h>
+#define SIZE_T_FMT "zu"
+#endif /* _WIN32 */
+
+#define INT64_FMT PRId64
+#define UINT64_FMT PRIu64
 
 #ifndef FROZEN_REALLOC
 #define FROZEN_REALLOC realloc
@@ -500,14 +517,20 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
       len += out->printer(out, fmt, 1);
       fmt++;
     } else if (fmt[0] == '%') {
-      char buf[20];
+      char buf[21];
       size_t skip = 2;
 
       if (fmt[1] == 'l' && fmt[2] == 'l' && (fmt[3] == 'd' || fmt[3] == 'u')) {
         int64_t val = va_arg(ap, int64_t);
-        const char *fmt2 = fmt[3] == 'u' ? UINT64_FMT : INT64_FMT;
+        const char *fmt2 = fmt[3] == 'u' ? "%" UINT64_FMT : "%" INT64_FMT;
         snprintf(buf, sizeof(buf), fmt2, val);
         len += out->printer(out, buf, strlen(buf));
+        skip += 2;
+      } else if (fmt[1] == 'z' && fmt[2] == 'u') {
+        size_t val = va_arg(ap, size_t);
+        snprintf(buf, sizeof(buf), "%" SIZE_T_FMT, val);
+        len += out->printer(out, buf, strlen(buf));
+        skip += 1;
       } else if (fmt[1] == 'M') {
         json_printf_callback_t f = va_arg(ap, json_printf_callback_t);
         len += f(out, &ap);
@@ -525,14 +548,51 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
           len += out->printer(out, quote, 1);
         }
       } else {
-        const char *end_of_format_specifier = "sdfFgGlhu.-0123456789";
+        const char *end_of_format_specifier = "sdfFgGlhuI.-0123456789";
         size_t n = strspn(fmt + 1, end_of_format_specifier);
         char fmt2[20];
+        va_list sub_ap;
         strncpy(fmt2, fmt, n + 1 > sizeof(fmt2) ? sizeof(fmt2) : n + 1);
         fmt2[n + 1] = '\0';
-        vsnprintf(buf, sizeof(buf), fmt2, ap);
+
+        /*
+         * we delegate printing to the system printf.
+         * The goal here is to delegate all modifiers parsing to the system
+         * printf, as you can see below we still have to parse the format types.
+         */
+        va_copy(sub_ap, ap);
+        vsnprintf(buf, sizeof(buf), fmt2, sub_ap);
+
+        /*
+         * however we need to parse the type ourselves in order to avance
+         * the va_list by the correct amount; there is no portable way to
+         * inherit the advancement made by vprintf.
+         * 32-bit (linux or windows) passes va_list by value.
+         */
+        if ((n + 1 == strlen("%" PRId64) && strcmp(fmt2, "%" PRId64) == 0) ||
+            (n + 1 == strlen("%" PRIu64) && strcmp(fmt2, "%" PRIu64) == 0)) {
+          (void) va_arg(ap, int64_t);
+          skip += strlen(PRIu64) - 1;
+        } else {
+          switch (fmt2[n]) {
+            case 'u':
+            case 'd':
+              (void) va_arg(ap, int);
+              break;
+            case 'g':
+            case 'f':
+              (void) va_arg(ap, double);
+              break;
+            case 'p':
+              (void) va_arg(ap, void *);
+              break;
+            default:
+              /* many types are promoted to int */
+              (void) va_arg(ap, int);
+          }
+        }
+
         len += out->printer(out, buf, strlen(buf));
-        CONSUME_ARG(ap);
         skip = n + 1;
       }
       fmt += skip;
@@ -585,3 +645,23 @@ int json_printf_array(struct json_out *out, va_list *ap) {
   len += json_printf(out, "]", 1);
   return len;
 }
+
+#ifdef _WIN32
+int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
+  int res = _vsnprintf(str, size, format, ap);
+  va_end(ap);
+  if (res >= size) {
+    str[size - 1] = '\0';
+  }
+  return res;
+}
+
+int cs_win_snprintf(char *str, size_t size, const char *format, ...) {
+  int res;
+  va_list ap;
+  va_start(ap, format);
+  res = vsnprintf(str, size, format, ap);
+  va_end(ap);
+  return res;
+}
+#endif /* _WIN32 */
