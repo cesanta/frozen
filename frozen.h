@@ -17,8 +17,8 @@
  * license, as set out in <http://cesanta.com/products.html>.
  */
 
-#ifndef FROZEN_HEADER_INCLUDED
-#define FROZEN_HEADER_INCLUDED
+#ifndef CS_FROZEN_FROZEN_H_
+#define CS_FROZEN_FROZEN_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -117,4 +117,4 @@ int json_printf_array(struct json_out *, va_list *ap);
 }
 #endif /* __cplusplus */
 
-#endif /* FROZEN_HEADER_INCLUDED */
+#endif /* CS_FROZEN_FROZEN_H_ */
