@@ -363,6 +363,23 @@ static const char *test_system() {
   return NULL;
 }
 
+static void cb(void *data, const char *path, const struct json_token *token) {
+  char *buf = (char *) data;
+  sprintf(buf + strlen(buf), "%d->%s[%.*s] ", token->type, path, token->len,
+          token->ptr);
+}
+
+static const char *test_callback_api() {
+  const char *s = "{\"c\":[{\"a\":9,\"b\":\"x\"}]}";
+  const char *result =
+      "2->.c.a[9] 1->.c.b[x] 3->.c[{\"a\":9,\"b\":\"x\"}] "
+      "7->.c[[{\"a\":9,\"b\":\"x\"}]] 3->[{\"c\":[{\"a\":9,\"b\":\"x\"}]}] ";
+  char buf[200] = "";
+  ASSERT(json_parse(s, strlen(s), cb, buf) == (int) strlen(s));
+  ASSERT(strcmp(buf, result) == 0);
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_errors);
   RUN_TEST(test_config);
@@ -370,6 +387,7 @@ static const char *run_all_tests(void) {
   RUN_TEST(test_realloc);
   RUN_TEST(test_json_printf);
   RUN_TEST(test_system);
+  RUN_TEST(test_callback_api);
   return NULL;
 }
 

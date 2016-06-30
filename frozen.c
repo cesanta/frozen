@@ -65,6 +65,10 @@ typedef unsigned _int64 uint64_t;
 #define FROZEN_FREE free
 #endif
 
+#ifndef JSON_MAX_PATH_LEN
+#define JSON_MAX_PATH_LEN 60
+#endif
+
 struct frozen {
   const char *end;
   const char *cur;
@@ -72,7 +76,47 @@ struct frozen {
   int max_tokens;
   int num_tokens;
   int do_realloc;
+
+  /* For callback API */
+  char path[JSON_MAX_PATH_LEN];
+  int path_len;
+  void *callback_data;
+  json_parse_callback_t callback;
 };
+
+struct fstate {
+  const char *ptr;
+  enum json_type type;
+  int path_len;
+};
+
+#define SET_STATE(fr, ptr, type, str, len)                \
+  struct fstate fstate = {(ptr), (type), (fr)->path_len}; \
+  append_to_path((fr), (str), (len));
+
+#define CALL_BACK(fr)                                                       \
+  do {                                                                      \
+    struct json_token __t = {                                               \
+        fstate.ptr, (fr)->cur - (const char *) fstate.ptr, 0, fstate.type}; \
+    truncate_path((fr), fstate.path_len);                                   \
+    if ((fr)->callback &&                                                   \
+        ((fr)->path_len == 0 || (fr)->path[(fr)->path_len - 1] != '.'))     \
+      (fr)->callback((fr)->callback_data, (fr)->path, &__t);                \
+  } while (0)
+
+static int append_to_path(struct frozen *f, const char *str, int size) {
+  int n = f->path_len;
+  f->path_len +=
+      snprintf(f->path + f->path_len, sizeof(f->path) - (f->path_len + 1),
+               "%.*s", size, str);
+
+  return n;
+}
+
+static void truncate_path(struct frozen *f, int len) {
+  f->path_len = len;
+  f->path[len] = '\0';
+}
 
 static int parse_object(struct frozen *f);
 static int parse_value(struct frozen *f);
@@ -183,12 +227,16 @@ static int capture_len(struct frozen *f, int token_index, const char *ptr) {
 /* identifier = letter { letter | digit | '_' } */
 static int parse_identifier(struct frozen *f) {
   EXPECT(is_alpha(cur(f)), JSON_STRING_INVALID);
-  TRY(capture_ptr(f, f->cur, JSON_TYPE_STRING));
-  while (f->cur < f->end &&
-         (*f->cur == '_' || is_alpha(*f->cur) || is_digit(*f->cur))) {
-    f->cur++;
+  {
+    SET_STATE(f, f->cur, JSON_TYPE_STRING, "", 0);
+    TRY(capture_ptr(f, f->cur, JSON_TYPE_STRING));
+    while (f->cur < f->end &&
+           (*f->cur == '_' || is_alpha(*f->cur) || is_digit(*f->cur))) {
+      f->cur++;
+    }
+    capture_len(f, f->num_tokens - 1, f->cur);
+    CALL_BACK(f);
   }
-  capture_len(f, f->num_tokens - 1, f->cur);
   return 0;
 }
 
@@ -208,20 +256,24 @@ static int get_utf8_char_len(unsigned char ch) {
 static int parse_string(struct frozen *f) {
   int n, ch = 0, len = 0;
   TRY(test_and_skip(f, '"'));
-  TRY(capture_ptr(f, f->cur, JSON_TYPE_STRING));
-  for (; f->cur < f->end; f->cur += len) {
-    ch = *(unsigned char *) f->cur;
-    len = get_utf8_char_len((unsigned char) ch);
-    EXPECT(ch >= 32 && len > 0, JSON_STRING_INVALID); /* No control chars */
-    EXPECT(len < left(f), JSON_STRING_INCOMPLETE);
-    if (ch == '\\') {
-      EXPECT((n = get_escape_len(f->cur + 1, left(f))) > 0, n);
-      len += n;
-    } else if (ch == '"') {
-      capture_len(f, f->num_tokens - 1, f->cur);
-      f->cur++;
-      break;
-    };
+  {
+    SET_STATE(f, f->cur, JSON_TYPE_STRING, "", 0);
+    TRY(capture_ptr(f, f->cur, JSON_TYPE_STRING));
+    for (; f->cur < f->end; f->cur += len) {
+      ch = *(unsigned char *) f->cur;
+      len = get_utf8_char_len((unsigned char) ch);
+      EXPECT(ch >= 32 && len > 0, JSON_STRING_INVALID); /* No control chars */
+      EXPECT(len < left(f), JSON_STRING_INCOMPLETE);
+      if (ch == '\\') {
+        EXPECT((n = get_escape_len(f->cur + 1, left(f))) > 0, n);
+        len += n;
+      } else if (ch == '"') {
+        capture_len(f, f->num_tokens - 1, f->cur);
+        CALL_BACK(f);
+        f->cur++;
+        break;
+      };
+    }
   }
   return ch == '"' ? 0 : JSON_STRING_INCOMPLETE;
 }
@@ -229,6 +281,7 @@ static int parse_string(struct frozen *f) {
 /* number = [ '-' ] digit+ [ '.' digit+ ] [ ['e'|'E'] ['+'|'-'] digit+ ] */
 static int parse_number(struct frozen *f) {
   int ch = cur(f);
+  SET_STATE(f, f->cur, JSON_TYPE_NUMBER, "", 0);
   TRY(capture_ptr(f, f->cur, JSON_TYPE_NUMBER));
   if (ch == '-') f->cur++;
   EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
@@ -249,6 +302,7 @@ static int parse_number(struct frozen *f) {
     while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
   }
   capture_len(f, f->num_tokens - 1, f->cur);
+  CALL_BACK(f);
   return 0;
 }
 
@@ -256,14 +310,18 @@ static int parse_number(struct frozen *f) {
 static int parse_array(struct frozen *f) {
   int ind;
   TRY(test_and_skip(f, '['));
-  TRY(capture_ptr(f, f->cur - 1, JSON_TYPE_ARRAY));
-  ind = f->num_tokens - 1;
-  while (cur(f) != ']') {
-    TRY(parse_value(f));
-    if (cur(f) == ',') f->cur++;
+  {
+    SET_STATE(f, f->cur - 1, JSON_TYPE_ARRAY, "", 0);
+    TRY(capture_ptr(f, f->cur - 1, JSON_TYPE_ARRAY));
+    ind = f->num_tokens - 1;
+    while (cur(f) != ']') {
+      TRY(parse_value(f));
+      if (cur(f) == ',') f->cur++;
+    }
+    TRY(test_and_skip(f, ']'));
+    capture_len(f, ind, f->cur);
+    CALL_BACK(f);
   }
-  TRY(test_and_skip(f, ']'));
-  capture_len(f, ind, f->cur);
   return 0;
 }
 
@@ -276,6 +334,7 @@ static int compare(const char *s, const char *str, int len) {
 static int expect(struct frozen *f, const char *s, int len, enum json_type t) {
   int i, n = left(f);
 
+  SET_STATE(f, f->cur, t, "", 0);
   TRY(capture_ptr(f, f->cur, t));
   for (i = 0; i < len; i++) {
     if (i >= n) return JSON_STRING_INCOMPLETE;
@@ -283,6 +342,7 @@ static int expect(struct frozen *f, const char *s, int len, enum json_type t) {
   }
   f->cur += len;
   TRY(capture_len(f, f->num_tokens - 1, f->cur));
+  CALL_BACK(f);
 
   return 0;
 }
@@ -348,9 +408,17 @@ static int parse_key(struct frozen *f) {
 
 /* pair = key ':' value */
 static int parse_pair(struct frozen *f) {
+  int current_path_len;
+  const char *tok;
+  skip_whitespaces(f);
+  tok = f->cur;
   TRY(parse_key(f));
+  current_path_len =
+      append_to_path(f, *tok == '"' ? tok + 1 : tok,
+                     *tok == '"' ? f->cur - tok - 2 : f->cur - tok);
   TRY(test_and_skip(f, ':'));
   TRY(parse_value(f));
+  truncate_path(f, current_path_len);
   return 0;
 }
 
@@ -358,14 +426,18 @@ static int parse_pair(struct frozen *f) {
 static int parse_object(struct frozen *f) {
   int ind;
   TRY(test_and_skip(f, '{'));
-  TRY(capture_ptr(f, f->cur - 1, JSON_TYPE_OBJECT));
-  ind = f->num_tokens - 1;
-  while (cur(f) != '}') {
-    TRY(parse_pair(f));
-    if (cur(f) == ',') f->cur++;
+  {
+    SET_STATE(f, f->cur - 1, JSON_TYPE_OBJECT, ".", 1);
+    TRY(capture_ptr(f, f->cur - 1, JSON_TYPE_OBJECT));
+    ind = f->num_tokens - 1;
+    while (cur(f) != '}') {
+      TRY(parse_pair(f));
+      if (cur(f) == ',') f->cur++;
+    }
+    TRY(test_and_skip(f, '}'));
+    capture_len(f, ind, f->cur);
+    CALL_BACK(f);
   }
-  TRY(test_and_skip(f, '}'));
-  capture_len(f, ind, f->cur);
   return 0;
 }
 
@@ -558,7 +630,8 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         /*
          * we delegate printing to the system printf.
          * The goal here is to delegate all modifiers parsing to the system
-         * printf, as you can see below we still have to parse the format types.
+         * printf, as you can see below we still have to parse the format
+         * types.
          */
         va_copy(sub_ap, ap);
         vsnprintf(buf, sizeof(buf), fmt2, sub_ap);
@@ -665,3 +738,18 @@ int cs_win_snprintf(char *str, size_t size, const char *format, ...) {
   return res;
 }
 #endif /* _WIN32 */
+
+int json_parse(const char *json_string, int json_string_length,
+               json_parse_callback_t callback, void *callback_data) {
+  struct frozen frozen;
+
+  memset(&frozen, 0, sizeof(frozen));
+  frozen.end = json_string + json_string_length;
+  frozen.cur = json_string;
+  frozen.callback_data = callback_data;
+  frozen.callback = callback;
+
+  TRY(doit(&frozen));
+
+  return frozen.cur - json_string;
+}
