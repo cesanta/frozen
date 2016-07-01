@@ -310,7 +310,6 @@ static const char *test_json_printf(void) {
     const char *result = "{\"a\": [-1, 777], \"b\": 37}";
     json_printf(&out, "{a: %M, b: %d}", json_printf_array, arr, sizeof(arr),
                 sizeof(arr[0]), "%hd", 37);
-    printf("==> [%s]\n", buf);
     ASSERT(strcmp(buf, result) == 0);
   }
 
@@ -318,7 +317,6 @@ static const char *test_json_printf(void) {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     const char *result = "{\"a\": \"\\\"\\\\\\r\\nя\\t\\u0002\"}";
     json_printf(&out, "{a: %Q}", "\"\\\r\nя\t\x02");
-    printf("==> [%s]\n", buf);
     ASSERT(strcmp(buf, result) == 0);
   }
 
@@ -372,7 +370,7 @@ static void cb(void *data, const char *path, const struct json_token *token) {
 static const char *test_callback_api() {
   const char *s = "{\"c\":[{\"a\":9,\"b\":\"x\"}]}";
   const char *result =
-      "2->.c.a[9] 1->.c.b[x] 3->.c[{\"a\":9,\"b\":\"x\"}] "
+      "2->.c[0].a[9] 1->.c[0].b[x] 3->.c[0][{\"a\":9,\"b\":\"x\"}] "
       "7->.c[[{\"a\":9,\"b\":\"x\"}]] 3->[{\"c\":[{\"a\":9,\"b\":\"x\"}]}] ";
   char buf[200] = "";
   ASSERT(json_parse(s, strlen(s), cb, buf) == (int) strlen(s));
@@ -380,7 +378,38 @@ static const char *test_callback_api() {
   return NULL;
 }
 
+static int scan_array(const char *str, int len, void *user_data) {
+  struct json_token t;
+  int i;
+  char *buf = (char *) user_data;
+  printf("Parsing array: %.*s\n", len, str);
+  for (i = 0; json_scanf_array_elem(str, len, ".x", i, &t) > 0; i++) {
+    sprintf(buf + strlen(buf), "%d[%.*s] ", i, t.len, t.ptr);
+  }
+  return 0;
+}
+
+static const char *test_scanf(void) {
+  char buf[100] = "";
+  int a = 0, b = 0;
+  char *d = NULL;
+  const char *str =
+      "{ a: 1234, b : true, \"c\": {x: [17, 78, -20]}, d: \"hi%20there\" }";
+
+  ASSERT(json_scanf(str, strlen(str), "{a: %d, b: %B, c: [%M], d: %Q}", &a, &b,
+                    &scan_array, buf, &d) == 4);
+  ASSERT(a == 1234);
+  ASSERT(b == 1);
+  ASSERT(strcmp(buf, "0[17] 1[78] 2[-20] ") == 0);
+  ASSERT(d != NULL);
+  ASSERT(strcmp(d, "hi%20there") == 0);
+  free(d);
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
+  RUN_TEST(test_scanf);
   RUN_TEST(test_errors);
   RUN_TEST(test_config);
   RUN_TEST(test_nested);

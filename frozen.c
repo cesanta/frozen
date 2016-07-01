@@ -311,14 +311,19 @@ static int parse_number(struct frozen *f) {
 
 /* array = '[' [ value { ',' value } ] ']' */
 static int parse_array(struct frozen *f) {
-  int ind;
+  int i = 0, ind, current_path_len;
+  char buf[20];
   TRY(test_and_skip(f, '['));
   {
     SET_STATE(f, f->cur - 1, JSON_TYPE_ARRAY, "", 0);
     TRY(capture_ptr(f, f->cur - 1, JSON_TYPE_ARRAY));
     ind = f->num_tokens - 1;
     while (cur(f) != ']') {
+      snprintf(buf, sizeof(buf), "[%d]", i);
+      i++;
+      current_path_len = append_to_path(f, buf, strlen(buf));
       TRY(parse_value(f));
+      truncate_path(f, current_path_len);
       if (cur(f) == ',') f->cur++;
     }
     TRY(test_and_skip(f, ']'));
@@ -758,4 +763,139 @@ int json_parse(const char *json_string, int json_string_length,
   TRY(doit(&frozen));
 
   return frozen.cur - json_string;
+}
+
+struct scan_array_info {
+  char path[JSON_MAX_PATH_LEN];
+  struct json_token *token;
+};
+
+static void json_scanf_array_elem_cb(void *callback_data, const char *path,
+                                     const struct json_token *token) {
+  struct scan_array_info *info = (struct scan_array_info *) callback_data;
+  if (strcmp(path, info->path) == 0) {
+    *info->token = *token;
+  }
+}
+
+int json_scanf_array_elem(const char *s, int len, const char *path, int idx,
+                          struct json_token *token) {
+  struct scan_array_info info;
+  info.token = token;
+  memset(token, 0, sizeof(*token));
+  snprintf(info.path, sizeof(info.path), "%s[%d]", path, idx);
+  json_parse(s, len, json_scanf_array_elem_cb, &info);
+  return token->len;
+}
+
+struct json_scanf_info {
+  int num_conversions;
+  char *path;
+  const char *fmt;
+  void *target;
+  void *user_data;
+};
+
+static void json_scanf_cb(void *callback_data, const char *path,
+                          const struct json_token *tok) {
+  struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
+  if (strcmp(path, info->path) == 0) {
+    info->num_conversions += sscanf(tok->ptr, info->fmt, info->target);
+  }
+}
+
+static void json_scanf_cb_bool(void *callback_data, const char *path,
+                               const struct json_token *tok) {
+  struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
+  if (strcmp(path, info->path) == 0) {
+    info->num_conversions++;
+    *(int *) info->target = (tok->type == JSON_TYPE_TRUE ? 1 : 0);
+  }
+}
+
+static void json_scanf_cb_str(void *callback_data, const char *path,
+                              const struct json_token *tok) {
+  struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
+  if (strcmp(path, info->path) == 0) {
+    info->num_conversions++;
+    /* TODO(lsm): un-escape string */
+    *(char **) info->target = (char *) malloc(tok->len + 1);
+    if (*(char **) info->target != NULL) {
+      strncpy(*(char **) info->target, tok->ptr, tok->len);
+    }
+  }
+}
+
+static void json_scanf_cb_func(void *callback_data, const char *path,
+                               const struct json_token *tok) {
+  struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
+  if (strcmp(path, info->path) == 0) {
+    union {
+      void *p;
+      json_scanner_t f;
+    } u = {info->target};
+    info->num_conversions++;
+    u.f(tok->ptr, tok->len, info->user_data);
+  }
+}
+
+int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
+  char path[JSON_MAX_PATH_LEN] = "", fmtbuf[20];
+  int i = 0;
+  char *p = NULL;
+  struct json_scanf_info info = {0, path, fmtbuf, NULL, NULL};
+
+  while (fmt[i] != '\0') {
+    if (fmt[i] == '{') {
+      strcat(path, ".");
+      i++;
+    } else if (fmt[i] == '}') {
+      if ((p = strrchr(path, '.')) != NULL) *p = '\0';
+      i++;
+    } else if (fmt[i] == '%') {
+      info.target = va_arg(ap, void *);
+      switch (fmt[i + 1]) {
+        case 'B':
+          json_parse(s, len, json_scanf_cb_bool, &info);
+          i += 2;
+          break;
+        case 'Q':
+          json_parse(s, len, json_scanf_cb_str, &info);
+          i += 2;
+          break;
+        case 'M':
+          info.user_data = va_arg(ap, void *);
+          json_parse(s, len, json_scanf_cb_func, &info);
+          i += 2;
+          break;
+        default: {
+          const char *delims = ", \t\r\n]}";
+          int conv_len = strcspn(fmt + i + 1, delims) + 1;
+          snprintf(fmtbuf, sizeof(fmtbuf), "%.*s", conv_len, fmt + i);
+          json_parse(s, len, json_scanf_cb, &info);
+          i += conv_len;
+          i += strspn(fmt + i, delims);
+          break;
+        }
+      }
+    } else if (is_alpha(fmt[i])) {
+      const char *delims = ": \r\n\t";
+      int key_len = strcspn(&fmt[i], delims);
+      if ((p = strrchr(path, '.')) != NULL) p[1] = '\0';
+      sprintf(path + strlen(path), "%.*s", key_len, &fmt[i]);
+      i += key_len + strspn(fmt + i + key_len, delims);
+    } else {
+      i++;
+    }
+  }
+  return info.num_conversions;
+}
+
+int json_scanf(const char *str, int len, const char *fmt, ...) {
+  int result;
+  va_list ap;
+  va_start(ap, fmt);
+  result = json_vscanf(str, len, fmt, ap);
+  va_end(ap);
+  return result;
 }

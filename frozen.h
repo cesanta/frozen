@@ -50,6 +50,7 @@ struct json_token {
 #define JSON_STRING_INVALID -1
 #define JSON_STRING_INCOMPLETE -2
 #define JSON_TOKEN_ARRAY_TOO_SMALL -3
+#define JSON_INVALID_FORMAT_STRING -4
 
 int parse_json(const char *json_string, int json_string_length,
                struct json_token *tokens_array, int size_of_tokens_array);
@@ -123,6 +124,36 @@ int json_vprintf(struct json_out *, const char *fmt, va_list ap);
  * Return number of bytes printed.
  */
 int json_printf_array(struct json_out *, va_list *ap);
+
+/*
+ * Scan JSON string `str`, performing scanf-like conversions according to `fmt`.
+ * This is a `scanf()` - like function, with following differences:
+ *
+ * 1. Object keys in the format string may be not quoted, e.g. "{key: %d}"
+ * 2. Order of keys in an object is irrelevant.
+ * 3. Several extra format specifiers are supported:
+ *    - %B: consumes `int *`, expects boolean `true` or `false`.
+ *    - %Q: consumes `char **`, expects quoted, JSON-encoded string. Scanned
+ *       string is malloc-ed, caller must free() the string.
+ *    - %M: consumes custom scanning function pointer and
+ *       `void *user_data` parameter - see json_scanner_t definition.
+ *
+ * Return number of elements successfully scanned & converted.
+ * Negative number means scan error.
+ */
+int json_scanf(const char *str, int str_len, const char *fmt, ...);
+int json_vscanf(const char *str, int str_len, const char *fmt, va_list ap);
+
+/* json_scanf's %M handler  */
+typedef int (*json_scanner_t)(const char *str, int len, void *user_data);
+
+/*
+ * Helper function to scan array item with given path and index.
+ * Fills `token` with the matched JSON token.
+ * Return 0 if no array element found, otherwise non-0.
+ */
+int json_scanf_array_elem(const char *s, int len, const char *path, int index,
+                          struct json_token *token);
 
 #ifdef __cplusplus
 }
