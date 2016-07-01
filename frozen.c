@@ -44,7 +44,6 @@ typedef unsigned _int64 uint64_t;
 #else
 #define SIZE_T_FMT "u"
 #endif
-#define va_copy(x, y) x = y
 #else /* _WIN32 */
 /* <inttypes.h> wants this for C++ */
 #ifndef __STDC_FORMAT_MACROS
@@ -56,6 +55,10 @@ typedef unsigned _int64 uint64_t;
 
 #define INT64_FMT PRId64
 #define UINT64_FMT PRIu64
+
+#ifndef va_copy
+#define va_copy(x, y) x = y
+#endif
 
 #ifndef FROZEN_REALLOC
 #define FROZEN_REALLOC realloc
@@ -620,7 +623,7 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
           len += out->printer(out, quote, 1);
         }
       } else {
-        const char *end_of_format_specifier = "sdfFgGlhuI.-0123456789";
+        const char *end_of_format_specifier = "sdfFgGlhuI.*-0123456789";
         size_t n = strspn(fmt + 1, end_of_format_specifier);
         char fmt2[20];
         va_list sub_ap;
@@ -637,7 +640,7 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         vsnprintf(buf, sizeof(buf), fmt2, sub_ap);
 
         /*
-         * however we need to parse the type ourselves in order to avance
+         * however we need to parse the type ourselves in order to advance
          * the va_list by the correct amount; there is no portable way to
          * inherit the advancement made by vprintf.
          * 32-bit (linux or windows) passes va_list by value.
@@ -646,6 +649,9 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
             (n + 1 == strlen("%" PRIu64) && strcmp(fmt2, "%" PRIu64) == 0)) {
           (void) va_arg(ap, int64_t);
           skip += strlen(PRIu64) - 1;
+        } else if (strcmp(fmt2, "%.*s") == 0) {
+          (void) va_arg(ap, int);
+          (void) va_arg(ap, char *);
         } else {
           switch (fmt2[n]) {
             case 'u':
