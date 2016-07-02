@@ -50,7 +50,6 @@ struct json_token {
 #define JSON_STRING_INVALID -1
 #define JSON_STRING_INCOMPLETE -2
 #define JSON_TOKEN_ARRAY_TOO_SMALL -3
-#define JSON_INVALID_FORMAT_STRING -4
 
 int parse_json(const char *json_string, int json_string_length,
                struct json_token *tokens_array, int size_of_tokens_array);

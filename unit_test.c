@@ -399,7 +399,6 @@ static void scan_array(const char *str, int len, void *user_data) {
   struct json_token t;
   int i;
   char *buf = (char *) user_data;
-  printf("Parsing array: %.*s\n", len, str);
   for (i = 0; json_scanf_array_elem(str, len, ".x", i, &t) > 0; i++) {
     sprintf(buf + strlen(buf), "%d[%.*s] ", i, t.len, t.ptr);
   }
@@ -420,6 +419,23 @@ static const char *test_scanf(void) {
   ASSERT(d != NULL);
   ASSERT(strcmp(d, "hi%20there") == 0);
   free(d);
+
+  {
+    /* Test errors */
+    const char *str = "{foo:1, bar:[2,3,4]}";
+    ASSERT(json_parse(str, strlen(str), NULL, NULL) == (int) strlen(str));
+    for (size_t i = 1; i < strlen(str); i++) {
+      ASSERT(json_parse(str, i, NULL, NULL) == JSON_STRING_INCOMPLETE);
+    }
+  }
+
+  {
+    /* Test that paths are utf8 */
+    const char *str = "{\"ы\": 123}";
+    int x = 0;
+    ASSERT(json_scanf(str, strlen(str), "{ы: %d}", &x) == 1);
+    ASSERT(x == 123);
+  }
 
   return NULL;
 }

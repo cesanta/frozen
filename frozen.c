@@ -402,7 +402,7 @@ static int parse_value(struct frozen *f) {
 static int parse_key(struct frozen *f) {
   int ch = cur(f);
 #if 0
-  printf("%s 1 [%.*s]\n", __func__, (int) (f->end - f->cur), f->cur);
+  printf("%s [%.*s]\n", __func__, (int) (f->end - f->cur), f->cur);
 #endif
   if (is_alpha(ch)) {
     TRY(parse_identifier(f));
@@ -878,7 +878,7 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
           break;
         }
       }
-    } else if (is_alpha(fmt[i])) {
+    } else if (is_alpha(fmt[i]) || get_utf8_char_len(fmt[i]) > 1) {
       const char *delims = ": \r\n\t";
       int key_len = strcspn(&fmt[i], delims);
       if ((p = strrchr(path, '.')) != NULL) p[1] = '\0';
