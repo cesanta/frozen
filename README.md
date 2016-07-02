@@ -1,5 +1,5 @@
-JSON parser and generator for C/C++
-===========================================
+JSON parser and emitter for C/C++
+=================================
 
 # Features
 
@@ -8,177 +8,209 @@ JSON parser and generator for C/C++
    * Very small footprint
    * No dependencies
    * Code is strict ISO C and strict ISO C++ at the same time
+   * Specialized for embedded use case: prints and scans directly to/from
+     C/C++ variables
+   * Parser provides low-level callback API and high-level scanf-like API
    * Supports superset of JSON: allows non-quoted identifiers as object keys
    * Complete 100% test coverage
 
-# How to use it
+# Parsing Usage Example
 
-   1. Copy `frozen.c` and `frozen.h` to your project
-   2. Add `frozen.c` to the list of source files
-   3. Parsing with Frozen is done in two steps: first, split JSON string
-      into tokens by `parse_json()` or `parse_json2()`.
-      Second, search for certain
-      parameters in parsed string by `find_json_token()`. Below is an example,
-      error handling is omitted for clarity:
+```
+  // str has the following JSON string (notice keys are out of order):
+  // { "a": 123, "d": true, "b": [1, 2], "c": "hi" }
 
-
-        #include <stdio.h>
-        #include "frozen.h"
-
-        int main(void) {
-          static const char *json = " { foo: 1, bar: 2 } ";
-          struct json_token *arr, *tok;
-
-          // Tokenize json string, fill in tokens array
-          arr = parse_json2(json, strlen(json));
-
-          // Search for parameter "bar" and print it's value
-          tok = find_json_token(arr, "bar");
-          printf("Value of bar is: [%.*s]\n", tok->len, tok->ptr);
-
-          // Do not forget to free allocated tokens array
-          free(arr);
-
-          return 0;
-        }
-
-# API documentation
-
-    int parse_json(const char *json_string, int json_string_length,
-                   struct json_token *tokens_array, int size_of_tokens_array);
-    struct json_token *parse_json2(const char *json_string, int string_length);
-
-`parse_json()` and `parse_json2()` parse JSON string.
-`parse_json()` needs pre-allocated tokens array or NULL, whereas
-`parse_json2()` allocates tokens array automatically.
+  int a, b;
+  char *c;
+  json_scanf(str, strlen(str), "{ a:%d, b:%M, c:%Q, d:%B }",
+             &a, &b, &c, scan_array, my_data);
 
 
-`parse_json()` tokenizes `json_string` of length `json_string_length`.
-If `tokens_array` is not `NULL`, then `parse_json()` will store tokens
-in the `tokens_array`. Token with type
-`JSON_TYPE_EOF` marks the end of parsed tokens. JSON token is defined as:
+  // This function is called by json_scanf() call above.
+  // str is "[1, 2]", user_data is my_data.
+  static void scan_array(const char *str, int len, void *user_data) {
+    struct json_token t;
+    int i;
+    printf("Parsing array: %.*s\n", len, str);
+    for (i = 0; json_scanf_array_elem(str, len, ".x", i, &t) > 0; i++) {
+      printf("Index %d, token [%.*s]\n", i, t.len, t.ptr);
+    }
+  }
+```
 
-    struct json_token {
-      const char *ptr;    // Points to the beginning of the token
-      int len;            // Token length
-      int num_desc;       // For arrays and object, total number of descendants
-      int type;           // Type of the token, possible values below
+# Printing Usage Example
 
-    #define JSON_TYPE_EOF     0   // Not a real token, but end-of-tokens marker
-    #define JSON_TYPE_STRING  1
-    #define JSON_TYPE_NUMBER  2
-    #define JSON_TYPE_OBJECT  3
-    #define JSON_TYPE_TRUE    4
-    #define JSON_TYPE_FALSE   5
-    #define JSON_TYPE_NULL    6
-    #define JSON_TYPE_ARRAY   7
-    };
+Note keys are not escaped. `json_printf()` escapes them.
 
-If `tokens_array` is `NULL`, then `parse_json` just checks the validity of
-the JSON string, and points where parsing stops. If `tokens_array` is not
-`NULL`, it must be pre-allocated by the caller. Note that `struct json_token`
-just points to the data inside `json_string`, it does not own the data. Thus
-the token's lifetime is identical to the lifetime of `json_string`, until
-`json_string` is freed or mutated.  
-Return: On success, an offset inside `json_string` is returned
-where parsing has finished. On failure, a negative number is
-returned, one of:
+```
+  json_printf(&out, "{%Q: %d, x: [%B, %B], y: %Q}", "foo", 123, 0, -1, "hi");
+  // Result:
+  // {"foo": 123, "x": [false, true], "y": "hi"}
+```
 
-    #define JSON_STRING_INVALID           -1
-    #define JSON_STRING_INCOMPLETE        -2
-    #define JSON_TOKEN_ARRAY_TOO_SMALL    -3
+To print a complex object (for example, serialize a structure into an object),
+use `%M` format specifier:
 
-`parse_json2()` returns NULL on error and non-NULL on success.
+```
+  struct my_struct { int a, b; } mys = {1,2};
+  json_printf(&out, "{foo: %M, bar: %d}", print_my_struct, &mys, 3);
+  // Result:
+  // {"foo": {"a": 1, "b": 2}, "bar": 3}
+```
 
-Below is an illustration on how JSON string gets tokenized:
+```
+int print_my_struct(struct json_out *out, va_list *ap) {
+  struct my_struct *p = va_arg(*ap, struct my_struct *);
+  return json_printf(out, "{a: %d, b: %d}", p->a, p->b);
+}
+```
 
-       JSON string:      {  "key_1" : "value_1",  "key_2": [ 12345, null  ]   }
+# Low-level, callback based parsing API
 
-       JSON_TYPE_OBJECT  |<-------------------------------------------------->|
-       JSON_TYPE_STRING      |<->|
-       JSON_TYPE_STRING                |<--->|
-       JSON_TYPE_STRING                            |<->|
-       JSON_TYPE_ARRAY                                     |<------------>|
-       JSON_TYPE_NUMBER                                      |<->|
-       JSON_TYPE_NULL                                               |<>|
-       JSON_TYPE_EOF
+`json_parse()` calls given callback function for each scanned value.
+Callback receives path to the value, a JSON token that points to the value,
+and arbitrary user data pointer.
 
-<!-- -->
+The path is constructed using this rule:
+- Root element has "" (empty string) path
+- When an object starts, `.` (dot) is appended to the path
+- When an object key is parsed, a key name is appended to the path
+- When an array is parsed, for each element a `[ELEM_INDEX]` is appended
 
-    const struct json_token *find_json_token(const struct json_token *toks,
-                                             const char *path);
+For example, consider the following json string:
+`{ "foo": 123, "bar": [ 1, 2, { "baz": true } ] }`.
+The sequence of callback invocations will be as follows:
+- path: `.foo`, token: `123`
+- path: `.bar[0]`, token: `1`
+- path: `.bar[1]`, token: `2`
+- path: `.bar[2].baz`, token: `true`
+- path: `.bar[2]`, token: `{ "baz": true }`
+- path: `.bar`, token: `[ 1, 2, { "baz": true } ]`
+- path: ` ` (empty string), token: `{ "foo": 123, "bar": [ 1, 2, { "baz": true } ] }`
 
-This is a convenience function to fetch specific values from the parsed
-string. `toks` must be a valid array, successfully populated by `parse_json()`.
-A `path` is a string, an accessor to the desired element of the JSON object,
-as if it was written in Javascript. For example, if parsed JSON string is  
-`"{ foo : { bar: [1, 2, 3] } }"`, then path `"foo.bar[0]"` would return a token
-that points to number `"1"`.  
-Return: pointer to the found token, or NULL on failure.
+If top-level element is an array: `[1, {"foo": 2}]`
+- path: `[0]`, token: `1`
+- path: `[1].foo`, token: `2`
+- path: `[1]`, token: `{"foo": 2}`
+- path: ` ` (empty string), token: `[1, {"foo": 2}]`
+
+If top-level element is an scalar: `true`
+- path: ` ` (empty string), token: `true`
 
 
-    int json_emit_long(char *buf, int buf_len, long value);
-    int json_emit_double(char *buf, int buf_len, double value);
-    int json_emit_quoted_str(char *buf, int buf_len, const char *str);
-    int json_emit_unquoted_str(char *buf, int buf_len, const char *str);
+```
+/* Callback-based API */
+typedef void (*json_parse_callback_t)(void *callback_data, const char *path,
+                                      const struct json_token *token);
 
-These functions are used to generate JSON string. All of them accept
-a destination buffer and a value to output, and return number of bytes printed.
-Returned value can be bigger then destination buffer size, this is an
-indication of overflow. If there is no overflow, a buffer is guaranteed to
-be nul-terminated. Numbers are printed by `json_emit_double()` and
-`json_emit_int()` functions, strings are printed by `json_emit_quoted_str()`
-function. Values for `null`, `true`, `false`, and characters
-`{`, `}`, `[`, `]`, `,`, `:` are printed by
-`json_emit_raw_str()` function.
+/*
+ * Parse `json_string`, invoking `callback` function for each JSON token.
+ * Return number of bytes processed
+ */
+int json_parse(const char *json_string, int json_string_length,
+               json_parse_callback_t callback, void *callback_data);
+```
 
-    int json_emit(char *buf, int buf_len, const char *format, ...);
+# High level scanf-like parsing API
 
-A convenience function that generates JSON string using formatted output.
-Characters allowed in `format` string:  
-`[`, `]`, `{`, `}`, `,`, `:`, `\r`, `\n`, `\t`, ` `: these characters
-are appended to the output buffer as-is  
-`i`: argument must be an `long` value, outputs number  
-`f`: argument must be a `double` value, outputs number  
-`v`: arguments must be a `char *` value, followed by `size_t` value,
-     outputs quoted string  
-`V`: arguments must be a `char *` value, followed by `size_t` value,
-     outputs unquoted string  
-`s`: arguments must be a `\0`-terminated `char *` value, outputs quoted string  
-`S`: arguments must be a `\0`-terminated `char *` value, outputs unquoted string  
-`N`: outputs `null`  
-`T`: outputs `true`  
-`F`: outputs `false`  
+```
+/*
+ * Scan JSON string `str`, performing scanf-like conversions according to `fmt`.
+ * `fmt` uses `scanf()`-like format, with the following differences:
+ *
+ * 1. Object keys in the format string don't have to be quoted, e.g. "{key: %d}"
+ * 2. Order of keys in an object does not matter.
+ * 3. Several extra format specifiers are supported:
+ *    - %B: consumes `int *`, expects boolean `true` or `false`.
+ *    - %Q: consumes `char **`, expects quoted, JSON-encoded string. Scanned
+ *       string is malloc-ed, caller must free() the string. Scanned string
+ *       is a JSON decoded, unescaped UTF-8 string.
+ *    - %M: consumes custom scanning function pointer and
+ *       `void *user_data` parameter - see json_scanner_t definition.
+ *
+ * Return number of elements successfully scanned & converted.
+ * Negative number means scan error.
+ */
+int json_scanf(const char *str, int str_len, const char *fmt, ...);
+int json_vscanf(const char *str, int str_len, const char *fmt, va_list ap);
 
-## Example: accessing configuration parameters
+/* json_scanf's %M handler  */
+typedef void (*json_scanner_t)(const char *str, int len, void *user_data);
 
-    #include "frozen.h"
+/*
+ * Helper function to scan array item with given path and index.
+ * Fills `token` with the matched JSON token.
+ * Return 0 if no array element found, otherwise non-0.
+ */
+int json_scanf_array_elem(const char *s, int len, const char *path, int index,
+                          struct json_token *token);
+```
 
-    static const char *config_str = " { ports: [ 80, 443 ] } ";
-    struct json_token tokens[10];
-    int tokens_size = sizeof(tokens) / sizeof(tokens[0]);
+# Printing API
 
-    // Parse config string and make sure tokenization is correct
-    ASSERT(parse_json(config_str, strlen(config_str), tokens, tokens_size) > 0);
+Frozen printing API is pluggable. Out of the box, Frozen provides a way
+to print to a string buffer or to an opened file stream. It is easy to
+to tell Frozen to print to other destination - for example, to a socket, etc.
+Frozen does it by defining an "output context" descriptor, which has
+a pointer to low-level printing function. If you want to print to some other
+destination, just define your specific printing function and initialize
+output context with it.
 
-    ASSERT(tokens[0].type == JSON_TYPE_OBJECT);   // Tokens are populated
-    ASSERT(tokens[1].type == JSON_TYPE_STRING);   // in order of their
-    ASSERT(tokens[2].type == JSON_TYPE_ARRAY);    // appearance in the
-    ASSERT(tokens[3].type == JSON_TYPE_NUMBER);   // JSON string
-    ASSERT(tokens[4].type == JSON_TYPE_NUMBER);
-    ASSERT(tokens[5].type == JSON_TYPE_EOF);      // Last token is always EOF
+This is the definition of output context descriptor:
 
-    // Fetch port values
-    ASSERT(find_json_token(tokens, "ports") == &tokens[2]);
-    ASSERT(find_json_token(tokens, "ports[0]") == &tokens[3]);
-    ASSERT(find_json_token(tokens, "ports[1]") == &tokens[4]);
-    ASSERT(find_json_token(tokens, "ports[3]") == NULL);  // Outside boundaries
-    ASSERT(find_json_token(tokens, "foo.bar") == NULL);   // Nonexistent
+```
+struct json_out {
+  int (*printer)(struct json_out *, const char *str, size_t len);
+  union {
+    struct {
+      char *buf;
+      size_t size;
+      size_t len;
+    } buf;
+    void *data;
+    FILE *fp;
+  } u;
+};
+```
 
-## Example: generating JSON string `{ "foo": [-123, true, false, null] }`
+Frozen provides two helper macros to initialize two builtin output
+descriptors:
 
-    char buf[1000];
-    json_emit(buf, sizeof(buf), "{ s: [i, T, F, N] }", "foo", (long) -123);
+```
+struct json_out out1 = JSON_OUT_BUF(buf, len);
+struct json_out out2 = JSON_OUT_FILE(fp);
+```
+
+```
+typedef int (*json_printf_callback_t)(struct json_out *, va_list *ap);
+
+/*
+ * Generate formatted output into a given sting buffer.
+ * String values get escaped when printed (see `%M` specifier).
+ * This is a superset of printf() function, with extra format specifiers:
+ *  - `%B` print json boolean, `true` or `false`. Accepts an `int`.
+ *  - `%Q` print quoted escaped string or `null`. Accepts a `const char *`.
+ *  - `%M` invokes a json_printf_callback_t function. That callback function
+ *  can consume more parameters.
+ *
+ * json_printf() also auto-escapes keys.
+ *
+ * Return number of bytes printed. If the return value is bigger then the
+ * supplied buffer, that is an indicator of overflow. In the overflow case,
+ * overflown bytes are not printed.
+ */
+int json_printf(struct json_out *, const char *fmt, ...);
+int json_vprintf(struct json_out *, const char *fmt, va_list ap);
+
+/*
+ * Helper %M callback that prints contiguous C arrays.
+ * Consumes void *array_ptr, size_t array_size, size_t elem_size, char *fmt
+ * Return number of bytes printed.
+ */
+int json_printf_array(struct json_out *, va_list *ap);
+
+```
+
 
 # Contributions
 

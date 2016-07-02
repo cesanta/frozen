@@ -145,7 +145,7 @@ int json_scanf(const char *str, int str_len, const char *fmt, ...);
 int json_vscanf(const char *str, int str_len, const char *fmt, va_list ap);
 
 /* json_scanf's %M handler  */
-typedef int (*json_scanner_t)(const char *str, int len, void *user_data);
+typedef void (*json_scanner_t)(const char *str, int len, void *user_data);
 
 /*
  * Helper function to scan array item with given path and index.

@@ -240,6 +240,15 @@ static const char *test_realloc(void) {
   return NULL;
 }
 
+struct my_struct {
+  int a, b;
+};
+
+static int print_my_struct(struct json_out *out, va_list *ap) {
+  struct my_struct *p = va_arg(*ap, struct my_struct *);
+  return json_printf(out, "{a: %d, b: %d}", p->a, p->b);
+}
+
 static const char *test_json_printf(void) {
   char buf[200] = "";
 
@@ -331,6 +340,14 @@ static const char *test_json_printf(void) {
 
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    struct my_struct mys = {1, 2};
+    const char *result = "{\"foo\": {\"a\": 1, \"b\": 2}, \"bar\": 3}";
+    json_printf(&out, "{foo: %M, bar: %d}", print_my_struct, &mys, 3);
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     out.u.buf.size = 3;
     memset(buf, 0, sizeof(buf));
     ASSERT(json_printf(&out, "{%d}", 123) == 5);
@@ -378,7 +395,7 @@ static const char *test_callback_api() {
   return NULL;
 }
 
-static int scan_array(const char *str, int len, void *user_data) {
+static void scan_array(const char *str, int len, void *user_data) {
   struct json_token t;
   int i;
   char *buf = (char *) user_data;
@@ -386,7 +403,6 @@ static int scan_array(const char *str, int len, void *user_data) {
   for (i = 0; json_scanf_array_elem(str, len, ".x", i, &t) > 0; i++) {
     sprintf(buf + strlen(buf), "%d[%.*s] ", i, t.len, t.ptr);
   }
-  return 0;
 }
 
 static const char *test_scanf(void) {
