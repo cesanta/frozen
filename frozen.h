@@ -29,7 +29,7 @@ extern "C" {
 #include <stdio.h>
 
 enum json_type {
-  JSON_TYPE_EOF = 0, /* End of parsed tokens marker */
+  JSON_TYPE_INVALID = 0,
   JSON_TYPE_STRING = 1,
   JSON_TYPE_NUMBER = 2,
   JSON_TYPE_OBJECT = 3,
@@ -42,19 +42,14 @@ enum json_type {
 struct json_token {
   const char *ptr;     /* Points to the beginning of the token */
   int len;             /* Token length */
-  int num_desc;        /* For arrays and object, total number of descendants */
   enum json_type type; /* Type of the token, possible values above */
 };
+
+#define JSON_INVALID_TOKEN {0, 0, JSON_TYPE_INVALID}
 
 /* Error codes */
 #define JSON_STRING_INVALID -1
 #define JSON_STRING_INCOMPLETE -2
-#define JSON_TOKEN_ARRAY_TOO_SMALL -3
-
-int parse_json(const char *json_string, int json_string_length,
-               struct json_token *tokens_array, int size_of_tokens_array);
-struct json_token *parse_json2(const char *json_string, int string_length);
-struct json_token *find_json_token(struct json_token *toks, const char *path);
 
 /* Callback-based API */
 typedef void (*json_parse_callback_t)(void *callback_data, const char *path,
@@ -136,6 +131,7 @@ int json_printf_array(struct json_out *, va_list *ap);
  *       string is malloc-ed, caller must free() the string.
  *    - %M: consumes custom scanning function pointer and
  *       `void *user_data` parameter - see json_scanner_t definition.
+ *    - %T: consumes `struct json_token *`, fills it out with matched token.
  *
  * Return number of elements successfully scanned & converted.
  * Negative number means scan error.
