@@ -114,8 +114,8 @@ static const char *test_errors(void) {
 
   ASSERT(json_parse(NULL, 0, NULL, 0) == JSON_STRING_INVALID);
   for (i = 0; invalid_tests[i] != NULL; i++) {
-    ASSERT(json_parse(invalid_tests[i], strlen(invalid_tests[i]), NULL,
-                      NULL) == JSON_STRING_INVALID);
+    ASSERT(json_parse(invalid_tests[i], strlen(invalid_tests[i]), NULL, NULL) ==
+           JSON_STRING_INVALID);
   }
 
   for (i = 0; incomplete_tests[i] != NULL; i++) {
@@ -340,6 +340,15 @@ static const char *test_scanf(void) {
     ASSERT(t.type == JSON_TYPE_ARRAY);
     ASSERT(t.len == 7);
     ASSERT(strncmp(t.ptr, "[1,2,3]", t.len) == 0);
+  }
+
+  {
+    /* Test zero termination */
+    char *s = NULL;
+    const char *str = "{a: \"foo\", b:123}";
+    ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &s) == 1);
+    ASSERT(s != NULL);
+    ASSERT(s[3] == '\0');
   }
 
   return NULL;
