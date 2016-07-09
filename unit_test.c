@@ -56,7 +56,7 @@ static int static_num_tests = 0;
 static const char *test_errors(void) {
   /* clang-format off */
   static const char *invalid_tests[] = {
-      "1",        "a:3",           "\x01",         "{:",
+      "p",        "a:3",           "\x01",         "{:",
       " { 1",     "{a:\"\n\"}",    "{a:1x}",       "{a:1e}",
       "{a:.1}",   "{a:0.}",        "{a:0.e}",      "{a:0.e1}",
       "{a:0.1e}", "{a:\"\\u\" } ", "{a:\"\\yx\"}", "{a:\"\\u111r\"}",
@@ -349,6 +349,14 @@ static const char *test_scanf(void) {
     ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &s) == 1);
     ASSERT(s != NULL);
     ASSERT(s[3] == '\0');
+  }
+
+  {
+    /* Test for scalar value being a root element */
+    int n = 0;
+    const char *str = " true ";
+    ASSERT(json_scanf(str, strlen(str), " %B ", &n) == 1);
+    ASSERT(n == 1);
   }
 
   return NULL;
