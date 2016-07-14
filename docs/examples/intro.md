@@ -1,6 +1,6 @@
 ---
-title: "Examples"
+title: Examples
 items:
-  - { type: file, name: conf-params.md }
-  - { type: file, name: gen-json.md }
+  - { name: json_scanf.md }
+  - { name: json_printf.md }
 ---
