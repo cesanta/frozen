@@ -1,22 +1,22 @@
 ---
-title: json_parse()
+title: json_walk()
 ---
 
 ```c
 /* Callback-based API */
-typedef void (*json_parse_callback_t)(void *callback_data, const char *path,
-                                      const struct json_token *token);
+typedef void (*json_walk_callback_t)(void *callback_data, const char *path,
+                                     const struct json_token *token);
 
 /*
  * Parse `json_string`, invoking `callback` function for each JSON token.
  * Return number of bytes processed
  */
-int json_parse(const char *json_string, int json_string_length,
-               json_parse_callback_t callback, void *callback_data);
+int json_walk(const char *json_string, int json_string_length,
+              json_walk_callback_t callback, void *callback_data);
 ```
 
-`json_parse()` is a low-level, callback based parsing API.
-`json_parse()` calls given callback function for each scanned value.
+`json_walk()` is a low-level, callback based parsing API.
+`json_walk()` calls given callback function for each scanned value.
 
 Callback receives a path to the value, a JSON token that points to the value,
 and arbitrary user data pointer.

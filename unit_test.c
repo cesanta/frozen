@@ -112,24 +112,24 @@ static const char *test_errors(void) {
       " e : null, f: [ 1, -2, 3], g: { \"1\": [], h: [ 7 ] } } ";
   int i;
 
-  ASSERT(json_parse(NULL, 0, NULL, 0) == JSON_STRING_INVALID);
+  ASSERT(json_walk(NULL, 0, NULL, 0) == JSON_STRING_INVALID);
   for (i = 0; invalid_tests[i] != NULL; i++) {
-    ASSERT(json_parse(invalid_tests[i], strlen(invalid_tests[i]), NULL, NULL) ==
+    ASSERT(json_walk(invalid_tests[i], strlen(invalid_tests[i]), NULL, NULL) ==
            JSON_STRING_INVALID);
   }
 
   for (i = 0; incomplete_tests[i] != NULL; i++) {
-    ASSERT(json_parse(incomplete_tests[i], strlen(incomplete_tests[i]), NULL,
-                      NULL) == JSON_STRING_INCOMPLETE);
+    ASSERT(json_walk(incomplete_tests[i], strlen(incomplete_tests[i]), NULL,
+                     NULL) == JSON_STRING_INCOMPLETE);
   }
 
   for (i = 0; success_tests[i].str != NULL; i++) {
-    ASSERT(json_parse(success_tests[i].str, strlen(success_tests[i].str), NULL,
-                      NULL) == success_tests[i].expected_len);
+    ASSERT(json_walk(success_tests[i].str, strlen(success_tests[i].str), NULL,
+                     NULL) == success_tests[i].expected_len);
   }
 
-  ASSERT(json_parse("{}", 2, NULL, NULL) == 2);
-  ASSERT(json_parse(s1, strlen(s1), NULL, 0) > 0);
+  ASSERT(json_walk("{}", 2, NULL, NULL) == 2);
+  ASSERT(json_walk(s1, strlen(s1), NULL, 0) > 0);
 
   return NULL;
 }
@@ -284,7 +284,7 @@ static const char *test_callback_api() {
       "2->.c[0].a[9] 1->.c[0].b[x] 3->.c[0][{\"a\":9,\"b\":\"x\"}] "
       "7->.c[[{\"a\":9,\"b\":\"x\"}]] 3->[{\"c\":[{\"a\":9,\"b\":\"x\"}]}] ";
   char buf[200] = "";
-  ASSERT(json_parse(s, strlen(s), cb, buf) == (int) strlen(s));
+  ASSERT(json_walk(s, strlen(s), cb, buf) == (int) strlen(s));
   ASSERT(strcmp(buf, result) == 0);
   return NULL;
 }
@@ -317,9 +317,9 @@ static const char *test_scanf(void) {
   {
     /* Test errors */
     const char *str = "{foo:1, bar:[2,3,4]}";
-    ASSERT(json_parse(str, strlen(str), NULL, NULL) == (int) strlen(str));
+    ASSERT(json_walk(str, strlen(str), NULL, NULL) == (int) strlen(str));
     for (size_t i = 1; i < strlen(str); i++) {
-      ASSERT(json_parse(str, i, NULL, NULL) == JSON_STRING_INCOMPLETE);
+      ASSERT(json_walk(str, i, NULL, NULL) == JSON_STRING_INCOMPLETE);
     }
   }
 
