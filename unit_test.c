@@ -248,6 +248,14 @@ static const char *test_json_printf(void) {
     ASSERT(memcmp(buf, "{1\x00\x00\x00", 5) == 0);
   }
 
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    out.u.buf.size = 6;
+    memset(buf, 0, sizeof(buf));
+    ASSERT(json_printf(&out, "%.*Q", 3, "foobar") == 5);
+    ASSERT(memcmp(buf, "\"foo\"", 5) == 0);
+  }
+
   return NULL;
 }
 
