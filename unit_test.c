@@ -367,6 +367,23 @@ static const char *test_scanf(void) {
     ASSERT(n == 1);
   }
 
+  {
+    /* Test array of objects */
+    const char *str = " { \"a\": [ {\"b\": 123}, {\"b\": 345} ]} ";
+    int i, value, len = strlen(str), values[] = {123, 345};
+    struct json_token t;
+
+    /* Scan each array element into a token */
+    for (i = 0; json_scanf_array_elem(str, len, ".a", i, &t) > 0; i++) {
+      /* Now scan each token */
+      ASSERT(t.type == JSON_TYPE_OBJECT);
+      ASSERT(json_scanf(t.ptr, t.len, "{b: %d}", &value) == 1);
+      ASSERT((size_t) i < sizeof(values) / sizeof(values[0]));
+      ASSERT(values[i] == value);
+    }
+    ASSERT(i == 2);
+  }
+
   return NULL;
 }
 
