@@ -36,13 +36,13 @@ The sequence of callback invocations will be as follows:
 - path: `.bar[2].baz`, token: `true`
 - path: `.bar[2]`, token: `{ "baz": true }`
 - path: `.bar`, token: `[ 1, 2, { "baz": true } ]`
-- path: ` ` (empty string), token: `{ "foo": 123, "bar": [ 1, 2, { "baz": true } ] }`
+- path: "" (empty string), token: `{ "foo": 123, "bar": [ 1, 2, { "baz": true } ] }`
 
 If top-level element is an array: `[1, {"foo": 2}]`
 - path: `[0]`, token: `1`
 - path: `[1].foo`, token: `2`
 - path: `[1]`, token: `{"foo": 2}`
-- path: ` ` (empty string), token: `[1, {"foo": 2}]`
+- path: "" (empty string), token: `[1, {"foo": 2}]`
 
 If top-level element is an scalar: `true`
-- path: ` ` (empty string), token: `true`
+- path: "" (empty string), token: `true`
