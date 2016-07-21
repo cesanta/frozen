@@ -46,6 +46,9 @@ String values get escaped when printed (see `%M` specifier).
 This is a superset of printf() function, with extra format specifiers:
 - `%B` print json boolean, `true` or `false`. Accepts an `int`.
 - `%Q` print quoted escaped string or `null`. Accepts a `const char *`.
+- `%.*Q` like `%Q` but accepts the length of the string explicitly, pretty much like `%.*s`.
+Embedded NUL bytes are supported and will be properly encoded as `\u0000`.
+Accepts an `int` length and a `const char *`.
 - `%M` invokes a json_printf_callback_t function. That callback function
 can consume more parameters.
 
