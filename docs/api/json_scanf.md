@@ -24,12 +24,13 @@ Scan JSON string `str`, performing scanf-like conversions according to `fmt`.
       json_scanf(str, strlen(str), "{c: %B}", &value);
       ```
 3. Several extra format specifiers are supported:
-   - %B: consumes `int *`, expects boolean `true` or `false`.
-   - %Q: consumes `char **`, expects quoted, JSON-encoded string. Scanned
+   - `%B`: consumes `int *`, expects boolean `true` or `false`.
+   - `%Q`: consumes `char **`, expects quoted, JSON-encoded string. Scanned
       string is malloc-ed, caller must free() the string. Scanned string
       is a JSON decoded, unescaped UTF-8 string.
-   - %M: consumes custom scanning function pointer and
+   - `%M`: consumes custom scanning function pointer and
       `void *user_data` parameter - see json_scanner_t definition.
+   - `%T`: consumes `struct json_token *`, fills it out with matched token.
 
 Return number of elements successfully scanned & converted.
 Negative number means scan error.
