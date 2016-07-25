@@ -1,5 +1,6 @@
 PROF = -fprofile-arcs -ftest-coverage -g -O0
-CFLAGS = -W -Wall -pedantic -O3 $(PROF) $(CFLAGS_EXTRA)
+CFLAGS = -W -Wall -pedantic -O3 $(PROF) $(CFLAGS_EXTRA) -std=c99
+CXXFLAGS = -W -Wall -pedantic -O3 $(PROF) $(CFLAGS_EXTRA)
 
 .PHONY: clean all
 
@@ -13,7 +14,7 @@ c: clean
 
 c++: clean
 	rm -rf *.gc*
-	g++ unit_test.c -o unit_test $(CFLAGS) && ./unit_test
+	g++ unit_test.c -o unit_test $(CXXFLAGS) && ./unit_test
 	gcov -a unit_test.c
 
 w:

@@ -32,6 +32,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+const char *tok_type_names[] = {
+  "STRING",
+  "NUMBER",
+  "TRUE",
+  "FALSE",
+  "NULL",
+  "OBJECT_START",
+  "OBJECT_END",
+  "ARRAY_START",
+  "ARRAY_END",
+};
+
 #define FAIL(str, line)                           \
   do {                                            \
     printf("Fail on line %d: [%s]\n", line, str); \
@@ -280,18 +292,46 @@ static const char *test_system() {
   return NULL;
 }
 
-static void cb(void *data, const char *path, const struct json_token *token) {
+static void cb(void *data,
+               const char *name, size_t name_len,
+               const char *path,
+               const struct json_token *token) {
   char *buf = (char *) data;
-  sprintf(buf + strlen(buf), "%d->%s[%.*s] ", token->type, path, token->len,
-          token->ptr);
+
+  const char *snull = "<null>";
+
+  sprintf(buf + strlen(buf), "name:'%.*s', path:'%s', type:%s, val:'%.*s'\n",
+      name != NULL ? name_len : strlen(snull),
+      name != NULL ? name : snull,
+      path,
+      tok_type_names[token->type],
+      token->ptr != NULL ? token->len : strlen(snull),
+      token->ptr != NULL ? token->ptr : snull
+      );
 }
 
 static const char *test_callback_api() {
-  const char *s = "{\"c\":[{\"a\":9,\"b\":\"x\"}]}";
+  const char *s =
+    "{\"c\":[\"foo\", \"bar\", {\"a\":9, \"b\": \"x\"}], "
+    "\"mynull\": null, \"mytrue\": true, \"myfalse\": false}";
+
   const char *result =
-      "2->.c[0].a[9] 1->.c[0].b[x] 3->.c[0][{\"a\":9,\"b\":\"x\"}] "
-      "7->.c[[{\"a\":9,\"b\":\"x\"}]] 3->[{\"c\":[{\"a\":9,\"b\":\"x\"}]}] ";
-  char buf[200] = "";
+    "name:'<null>', path:'', type:OBJECT_START, val:'<null>'\n"
+    "name:'c', path:'.c', type:ARRAY_START, val:'<null>'\n"
+    "name:'0', path:'.c[0]', type:STRING, val:'foo'\n"
+    "name:'1', path:'.c[1]', type:STRING, val:'bar'\n"
+    "name:'2', path:'.c[2]', type:OBJECT_START, val:'<null>'\n"
+    "name:'a', path:'.c[2].a', type:NUMBER, val:'9'\n"
+    "name:'b', path:'.c[2].b', type:STRING, val:'x'\n"
+    "name:'<null>', path:'.c[2]', type:OBJECT_END, val:'{\"a\":9, \"b\": \"x\"}'\n"
+    "name:'<null>', path:'.c', type:ARRAY_END, val:'[\"foo\", \"bar\", {\"a\":9, \"b\": \"x\"}]'\n"
+    "name:'mynull', path:'.mynull', type:NULL, val:'null'\n"
+    "name:'mytrue', path:'.mytrue', type:TRUE, val:'true'\n"
+    "name:'myfalse', path:'.myfalse', type:FALSE, val:'false'\n"
+    "name:'<null>', path:'', type:OBJECT_END, val:'{\"c\":[\"foo\", \"bar\", {\"a\":9, \"b\": \"x\"}], \"mynull\": null, \"mytrue\": true, \"myfalse\": false}'\n"
+    ;
+
+  char buf[4096] = "";
   ASSERT(json_walk(s, strlen(s), cb, buf) == (int) strlen(s));
   ASSERT(strcmp(buf, result) == 0);
   return NULL;
@@ -345,7 +385,7 @@ static const char *test_scanf(void) {
     struct json_token t;
     memset(&t, 0, sizeof(t));
     ASSERT(json_scanf(str, strlen(str), "{b: %T}", &t) == 1);
-    ASSERT(t.type == JSON_TYPE_ARRAY);
+    ASSERT(t.type == JSON_TYPE_ARRAY_END);
     ASSERT(t.len == 7);
     ASSERT(strncmp(t.ptr, "[1,2,3]", t.len) == 0);
   }
@@ -376,7 +416,7 @@ static const char *test_scanf(void) {
     /* Scan each array element into a token */
     for (i = 0; json_scanf_array_elem(str, len, ".a", i, &t) > 0; i++) {
       /* Now scan each token */
-      ASSERT(t.type == JSON_TYPE_OBJECT);
+      ASSERT(t.type == JSON_TYPE_OBJECT_END);
       ASSERT(json_scanf(t.ptr, t.len, "{b: %d}", &value) == 1);
       ASSERT((size_t) i < sizeof(values) / sizeof(values[0]));
       ASSERT(values[i] == value);
