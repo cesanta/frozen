@@ -33,6 +33,7 @@
 #include <string.h>
 
 const char *tok_type_names[] = {
+  "INVALID",
   "STRING",
   "NUMBER",
   "TRUE",
