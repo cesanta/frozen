@@ -11,7 +11,7 @@ Note keys are not escaped. `json_printf()` escapes them.
   // {"foo": 123, "x": [false, true], "y": "hi"}
 ```
 
-To print a complex object (for example, serialize a structure into an object),
+To print a complex object (for example, serialise a structure into an object),
 use `%M` format specifier:
 
 ```c
