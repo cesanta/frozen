@@ -44,16 +44,16 @@ int json_walk(const char *json_string, int json_string_length,
 ```
 
 `json_walk()` is a low-level, callback based parsing API.
-`json_walk()` calls given callback function for each scanned value.
+`json_walk()` calls a given callback function for each scanned value.
 
 Callback receives a name, a path to the value, a JSON token that points to the
-value, and arbitrary user data pointer.
+value and an arbitrary user data pointer.
 
 The path is constructed using this rule:
 - Root element has "" (empty string) path
 - When an object starts, `.` (dot) is appended to the path
 - When an object key is parsed, a key name is appended to the path
-- When an array is parsed, for each element an `[ELEMENT_INDEX]` is appended
+- When an array is parsed, an `[ELEMENT_INDEX]` is appended for each element
 
 For example, consider the following json string:
 `{ "foo": 123, "bar": [ 1, 2, { "baz": true } ] }`.
@@ -77,5 +77,5 @@ If top-level element is an array: `[1, {"foo": 2}]`
 - type: `JSON_TYPE_OBJECT_END`, name: `NULL`, path: `"[1]"`, value: `"{\"foo\": 2}"`
 - type: `JSON_TYPE_ARRAY_END`, name: `NULL`, path: `""`, value: `"[1, {"foo": 2}]"`
 
-If top-level element is an scalar: `true`
+If top-level element is a scalar: `true`
 - type: `JSON_TYPE_TRUE`, name: `NULL`, path: `""`, value: `"true"`

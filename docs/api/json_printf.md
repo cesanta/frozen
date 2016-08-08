@@ -2,15 +2,15 @@
 title: json_printf()
 ---
 
-Frozen printing API is pluggable. Out of the box, Frozen provides a way
+The Frozen printing API is pluggable. Out of the box, Frozen provides a way
 to print to a string buffer or to an opened file stream. It is easy to
-to tell Frozen to print to other destination - for example, to a socket, etc.
-Frozen does it by defining an "output context" descriptor, which has
-a pointer to low-level printing function. If you want to print to some other
-destination, just define your specific printing function and initialize
+to tell Frozen to print to another destination, for example, to a socket, etc.
+Frozen does this by defining an "output context" descriptor which has
+a pointer to a low-level printing function. If you want to print to another
+destination, just define your specific printing function and initialise
 output context with it.
 
-This is the definition of output context descriptor:
+This is the definition of the output context descriptor:
 
 ```c
 struct json_out {
@@ -27,7 +27,7 @@ struct json_out {
 };
 ```
 
-Frozen provides two helper macros to initialize two builtin output
+Frozen provides two helper macros to initialise two built-in output
 descriptors:
 
 ```c
@@ -41,11 +41,11 @@ int json_printf(struct json_out *, const char *fmt, ...);
 int json_vprintf(struct json_out *, const char *fmt, va_list ap);
 ```
 
-Generate formatted output into a given sting buffer.
-String values get escaped when printed (see `%M` specifier).
-This is a superset of printf() function, with extra format specifiers:
-- `%B` print json boolean, `true` or `false`. Accepts an `int`.
-- `%Q` print quoted escaped string or `null`. Accepts a `const char *`.
+Generates formatted output into a given sting buffer.
+String values escape when printed (see `%M` specifier).
+This is a superset of the printf() function, with extra format specifiers:
+- `%B` prints JSON boolean, `true` or `false`. Accepts an `int`.
+- `%Q` prints quoted escaped string or `null`. Accepts a `const char *`.
 - `%.*Q` like `%Q` but accepts the length of the string explicitly, pretty much like `%.*s`.
 Embedded NUL bytes are supported and will be properly encoded as `\u0000`.
 Accepts an `int` length and a `const char *`.
@@ -54,7 +54,7 @@ can consume more parameters.
 
 `json_printf()` also auto-escapes keys.
 
-Return number of bytes printed. If the return value is bigger then the
+Returns the number of bytes printed. If the return value is bigger then the
 supplied buffer, that is an indicator of overflow. In the overflow case,
 overflown bytes are not printed.
 
@@ -64,4 +64,4 @@ int json_printf_array(struct json_out *, va_list *ap);
 
 A helper `%M` callback that prints contiguous C arrays.
 Consumes `void *array_ptr, size_t array_size, size_t elem_size, char *fmt`
-Return number of bytes printed.
+Returns number of bytes printed.
