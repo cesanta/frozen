@@ -269,6 +269,17 @@ static const char *test_json_printf(void) {
     ASSERT(memcmp(buf, "\"foo\"", 5) == 0);
   }
 
+  {
+    /*
+     * Check long string (which forces frozen to allocate a temporary buffer
+     * from heap)
+     */
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "{\"foo\": \"1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\"}";
+    json_printf(&out, "{foo: %s}", "\"1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\"");
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
   return NULL;
 }
 
