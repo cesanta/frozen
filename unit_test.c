@@ -313,11 +313,11 @@ static void cb(void *data,
   const char *snull = "<null>";
 
   sprintf(buf + strlen(buf), "name:'%.*s', path:'%s', type:%s, val:'%.*s'\n",
-      name != NULL ? name_len : strlen(snull),
+      (int) (name != NULL ? name_len : strlen(snull)),
       name != NULL ? name : snull,
       path,
       tok_type_names[token->type],
-      token->ptr != NULL ? token->len : strlen(snull),
+      (int) (token->ptr != NULL ? token->len : strlen(snull)),
       token->ptr != NULL ? token->ptr : snull
       );
 }
