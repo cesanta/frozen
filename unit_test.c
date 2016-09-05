@@ -290,7 +290,7 @@ static const char *test_json_printf(void) {
   return NULL;
 }
 
-static const char *test_system() {
+static const char *test_system(void) {
   char buf[2020];
   uint64_t u = 0xdeadbeeffee1dead;
   int64_t d = (int64_t) u;
@@ -329,7 +329,7 @@ static void cb(void *data,
       );
 }
 
-static const char *test_callback_api() {
+static const char *test_callback_api(void) {
   const char *s =
     "{\"c\":[\"foo\", \"bar\", {\"a\":9, \"b\": \"x\"}], "
     "\"mynull\": null, \"mytrue\": true, \"myfalse\": false}";
