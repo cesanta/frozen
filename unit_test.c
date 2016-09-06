@@ -287,6 +287,13 @@ static const char *test_json_printf(void) {
     ASSERT(strcmp(buf, "{\"a\": \"b\"}") == 0);
   }
 
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    memset(buf, 0, sizeof(buf));
+    ASSERT(json_printf(&out, "%.*s %d", 2, "abc", 5) > 0);
+    ASSERT(strcmp(buf, "ab 5") == 0);
+  }
+
   return NULL;
 }
 
