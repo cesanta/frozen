@@ -263,10 +263,11 @@ static const char *test_json_printf(void) {
 
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "\"foo\"";
     out.u.buf.size = 6;
     memset(buf, 0, sizeof(buf));
     ASSERT(json_printf(&out, "%.*Q", 3, "foobar") == 5);
-    ASSERT(memcmp(buf, "\"foo\"", 5) == 0);
+    ASSERT(memcmp(buf, result, 5) == 0);
   }
 
   {
@@ -282,9 +283,10 @@ static const char *test_json_printf(void) {
 
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *fmt = "{a: \"%s\"}", *result = "{\"a\": \"b\"}";
     memset(buf, 0, sizeof(buf));
-    ASSERT(json_printf(&out, "{a: \"%s\"}", "b") > 0);
-    ASSERT(strcmp(buf, "{\"a\": \"b\"}") == 0);
+    ASSERT(json_printf(&out, fmt, "b") > 0);
+    ASSERT(strcmp(buf, result) == 0);
   }
 
   {
@@ -296,9 +298,10 @@ static const char *test_json_printf(void) {
 
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "\"a_b0\": 1";
     memset(buf, 0, sizeof(buf));
     ASSERT(json_printf(&out, "a_b0: %d", 1) > 0);
-    ASSERT(strcmp(buf, "\"a_b0\": 1") == 0);
+    ASSERT(strcmp(buf, result) == 0);
   }
 
   return NULL;
@@ -398,8 +401,9 @@ static const char *test_scanf(void) {
   {
     /* Test errors */
     const char *str = "{foo:1, bar:[2,3,4]}";
+    size_t i;
     ASSERT(json_walk(str, strlen(str), NULL, NULL) == (int) strlen(str));
-    for (size_t i = 1; i < strlen(str); i++) {
+    for (i = 1; i < strlen(str); i++) {
       ASSERT(json_walk(str, i, NULL, NULL) == JSON_STRING_INCOMPLETE);
     }
   }
