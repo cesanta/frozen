@@ -305,14 +305,14 @@ static const char *test_json_printf(void) {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     memset(buf, 0, sizeof(buf));
     ASSERT(json_printf(&out, "%V", "a2", 2) > 0);
-    ASSERT(strcmp(buf, "YTI=") == 0);
+    ASSERT(strcmp(buf, "\"YTI=\"") == 0);
   }
 
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     memset(buf, 0, sizeof(buf));
     ASSERT(json_printf(&out, "%V", "\x00 \x01 \x02 abc", 9) > 0);
-    ASSERT(strcmp(buf, "ACABIAIgYWJj") == 0);
+    ASSERT(strcmp(buf, "\"ACABIAIgYWJj\"") == 0);
   }
 
   return NULL;
