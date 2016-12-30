@@ -315,6 +315,13 @@ static const char *test_json_printf(void) {
     ASSERT(strcmp(buf, "\"ACABIAIgYWJj\"") == 0);
   }
 
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    memset(buf, 0, sizeof(buf));
+    ASSERT(json_printf(&out, "%H", 9, "\x00 \x01 \x02 abc") > 0);
+    ASSERT(strcmp(buf, "\"002001200220616263\"") == 0);
+  }
+
   return NULL;
 }
 
@@ -496,6 +503,16 @@ static const char *test_scanf(void) {
     ASSERT(json_scanf(str, strlen(str), "{a: %V}", &result, &len) == 1);
     ASSERT(len == 2);
     ASSERT(strcmp(result, "a2") == 0);
+    free(result);
+  }
+
+  {
+    const char *str = "{a : \"61626320\" }";
+    int len = 0;
+    char *result = NULL;
+    ASSERT(json_scanf(str, strlen(str), "{a: %H}", &len, &result) == 1);
+    ASSERT(len == 4);
+    ASSERT(strcmp(result, "abc ") == 0);
     free(result);
   }
 
