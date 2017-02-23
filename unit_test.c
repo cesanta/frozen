@@ -389,6 +389,27 @@ static const char *test_callback_api(void) {
   return NULL;
 }
 
+/*
+ * Tests with the path which is longer than JSON_MAX_PATH_LEN (at the moment, 60)
+ */
+static const char *test_callback_api_long_path(void) {
+  const char *s =
+    "{\"MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZvf\": {}, \"jYP-27917287424p\": {}}";
+
+  const char *result =
+    "name:'<null>', path:'', type:OBJECT_START, val:'<null>'\n"
+    "name:'MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZvf', path:'.MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ', type:OBJECT_START, val:'<null>'\n"
+    "name:'<null>', path:'.MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ', type:OBJECT_END, val:'{}'\n"
+    "name:'jYP-27917287424p', path:'.jYP-27917287424p', type:OBJECT_START, val:'<null>'\n"
+    "name:'<null>', path:'.jYP-27917287424p', type:OBJECT_END, val:'{}'\n"
+    "name:'<null>', path:'', type:OBJECT_END, val:'{\"MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZvf\": {}, \"jYP-27917287424p\": {}}'\n";
+
+  char buf[4096] = "";
+  ASSERT(json_walk(s, strlen(s), cb, buf) == (int) strlen(s));
+  ASSERT(strcmp(buf, result) == 0);
+  return NULL;
+}
+
 static void scan_array(const char *str, int len, void *user_data) {
   struct json_token t;
   int i;
@@ -543,6 +564,7 @@ static const char *run_all_tests(void) {
   RUN_TEST(test_json_printf);
   RUN_TEST(test_system);
   RUN_TEST(test_callback_api);
+  RUN_TEST(test_callback_api_long_path);
   RUN_TEST(test_json_unescape);
   return NULL;
 }
