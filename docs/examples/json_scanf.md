@@ -8,8 +8,9 @@ title: json_scanf() example
 
   int a, b;
   char *c;
+  void *my_data = NULL;
   json_scanf(str, strlen(str), "{ a:%d, b:%M, c:%Q, d:%B }",
-             &a, &b, &c, scan_array, my_data);
+             &a, scan_array, my_data, &c, &b);
 
 
   // This function is called by json_scanf() call above.
