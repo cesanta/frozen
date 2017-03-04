@@ -547,6 +547,14 @@ static const char *test_scanf(void) {
     free(result);
   }
 
+  {
+    const char *str = "{a : null }";
+    char *result = NULL;
+    ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &result) == 0);
+    ASSERT(result == NULL);
+    free(result);
+  }
+  
   return NULL;
 }
 
