@@ -549,7 +549,7 @@ static const char *test_scanf(void) {
 
   {
     const char *str = "{a : null }";
-    char *result = NULL;
+    char *result = (char *)123;
     ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &result) == 0);
     ASSERT(result == NULL);
     free(result);
