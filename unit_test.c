@@ -355,7 +355,7 @@ static void cb(void *data, const char *name, size_t name_len, const char *path,
   sprintf(buf + strlen(buf), "name:'%.*s', path:'%s', type:%s, val:'%.*s'\n",
           (int) (name != NULL ? name_len : strlen(snull)),
           name != NULL ? name : snull, path, tok_type_names[token->type],
-          (int) (token->ptr != NULL ? token->len : strlen(snull)),
+          (int) (token->ptr != NULL ? token->len : (int)strlen(snull)),
           token->ptr != NULL ? token->ptr : snull);
 }
 
@@ -544,6 +544,14 @@ static const char *test_scanf(void) {
     ASSERT(json_scanf(str, strlen(str), "{a: %V}", &result, &len) == 1);
     ASSERT(len == 14);
     ASSERT(strcmp(result, "приветы") == 0);
+    free(result);
+  }
+
+  {
+    const char *str = "{a : null }";
+    char *result = NULL;
+    ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &result) == 0);
+    ASSERT(result == NULL);
     free(result);
   }
 
