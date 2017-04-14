@@ -566,6 +566,30 @@ static const char *test_json_unescape(void) {
   return NULL;
 }
 
+static void cb2(void *data, const char *name, size_t name_len, const char *path,
+               const struct json_token *token) {
+  struct json_token *pt = (struct json_token *)data;
+  pt->ptr = token->ptr;
+  pt->len = token->len;
+}
+
+static const char *test_parse_string(void) {
+  const char *str = " \" foo\\bar\"";
+  const int str_len = strlen(str);
+  struct json_token t;
+  struct frozen f;
+  memset(&f, 0, sizeof(f));
+  f.end = str + str_len;
+  f.cur = str;
+  f.callback_data = (void *)&t;
+  f.callback = cb2;
+
+  ASSERT(parse_string(&f) == 0);
+  ASSERT(strncmp(t.ptr, " foo\\bar", t.len) == 0);
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_scanf);
   RUN_TEST(test_errors);
@@ -574,6 +598,7 @@ static const char *run_all_tests(void) {
   RUN_TEST(test_callback_api);
   RUN_TEST(test_callback_api_long_path);
   RUN_TEST(test_json_unescape);
+  RUN_TEST(test_parse_string);
   return NULL;
 }
 
