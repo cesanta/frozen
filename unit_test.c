@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 const char *tok_type_names[] = {
     "INVALID", "STRING",       "NUMBER",     "TRUE",        "FALSE",
@@ -553,6 +554,20 @@ static const char *test_scanf(void) {
     ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &result) == 0);
     ASSERT(result == NULL);
     free(result);
+  }
+
+  {
+    int a = 0;
+    bool b = false;
+    int c = 0xFFFFFFFF;
+    const char *str = "{\"b\":true,\"c\":false,\"a\":2}";
+    ASSERT(json_scanf(str, strlen(str), "{a:%d, b:%B, c:%B}", &a, &b, &c) == 3);
+    ASSERT(a == 2);
+    ASSERT(b == true);
+    if (sizeof(bool) == 1)
+      ASSERT((char)c == false);
+    else
+      ASSERT(c == false);
   }
 
   return NULL;
