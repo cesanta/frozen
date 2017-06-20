@@ -586,6 +586,9 @@ static void cb2(void *data, const char *name, size_t name_len, const char *path,
   struct json_token *pt = (struct json_token *)data;
   pt->ptr = token->ptr;
   pt->len = token->len;
+  (void) path;
+  (void) name_len;
+  (void) name;
 }
 
 static const char *test_parse_string(void) {
@@ -605,7 +608,20 @@ static const char *test_parse_string(void) {
   return NULL;
 }
 
+static const char *test_eos(void) {
+  const char *s = "{\"a\": 12345}";
+  size_t n = 999;
+  char *buf = (char *) malloc(n);
+  int s_len = strlen(s), a = 0;
+  memset(buf, 'x', n);
+  memcpy(buf, s, s_len);
+  ASSERT(json_scanf(buf, n, "{a:%d}", &a) == 1);
+  ASSERT(a == 12345);
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
+  RUN_TEST(test_eos);
   RUN_TEST(test_scanf);
   RUN_TEST(test_errors);
   RUN_TEST(test_json_printf);
