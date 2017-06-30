@@ -323,6 +323,13 @@ static const char *test_json_printf(void) {
     ASSERT(strcmp(buf, "\"002001200220616263\"") == 0);
   }
 
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    memset(buf, 0, sizeof(buf));
+    ASSERT(json_printf(&out, "%c", 0x53) > 0);
+    ASSERT(strcmp(buf, "S") == 0);
+  }
+
   return NULL;
 }
 
