@@ -330,6 +330,16 @@ static const char *test_json_printf(void) {
     ASSERT(strcmp(buf, "S") == 0);
   }
 
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *result = "<\"array\">0f";
+    memset(buf, 0, sizeof(buf));
+    ASSERT(json_printf(&out, "<array>%02x", 15) > 0);
+    printf("[%s]\n", buf);
+    ASSERT(strcmp(buf, result) == 0);
+  }
+
+
   return NULL;
 }
 
