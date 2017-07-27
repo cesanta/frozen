@@ -339,7 +339,6 @@ static const char *test_json_printf(void) {
     ASSERT(strcmp(buf, result) == 0);
   }
 
-
   return NULL;
 }
 
@@ -373,7 +372,7 @@ static void cb(void *data, const char *name, size_t name_len, const char *path,
   sprintf(buf + strlen(buf), "name:'%.*s', path:'%s', type:%s, val:'%.*s'\n",
           (int) (name != NULL ? name_len : strlen(snull)),
           name != NULL ? name : snull, path, tok_type_names[token->type],
-          (int) (token->ptr != NULL ? token->len : (int)strlen(snull)),
+          (int) (token->ptr != NULL ? token->len : (int) strlen(snull)),
           token->ptr != NULL ? token->ptr : snull);
 }
 
@@ -408,19 +407,31 @@ static const char *test_callback_api(void) {
 }
 
 /*
- * Tests with the path which is longer than JSON_MAX_PATH_LEN (at the moment, 60)
+ * Tests with the path which is longer than JSON_MAX_PATH_LEN (at the moment,
+ * 60)
  */
 static const char *test_callback_api_long_path(void) {
   const char *s =
-    "{\"MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZvf\": {}, \"jYP-27917287424p\": {}}";
+      "{\"MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+      "ZZZZZZZZZZZZZZZZZvf\": {}, \"jYP-27917287424p\": {}}";
 
   const char *result =
-    "name:'<null>', path:'', type:OBJECT_START, val:'<null>'\n"
-    "name:'MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZvf', path:'.MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ', type:OBJECT_START, val:'<null>'\n"
-    "name:'<null>', path:'.MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ', type:OBJECT_END, val:'{}'\n"
-    "name:'jYP-27917287424p', path:'.jYP-27917287424p', type:OBJECT_START, val:'<null>'\n"
-    "name:'<null>', path:'.jYP-27917287424p', type:OBJECT_END, val:'{}'\n"
-    "name:'<null>', path:'', type:OBJECT_END, val:'{\"MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZvf\": {}, \"jYP-27917287424p\": {}}'\n";
+      "name:'<null>', path:'', type:OBJECT_START, val:'<null>'\n"
+      "name:'"
+      "MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+      "ZZZZZZZZZZZZZZvf', "
+      "path:'.MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ', "
+      "type:OBJECT_START, val:'<null>'\n"
+      "name:'<null>', "
+      "path:'.MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ', "
+      "type:OBJECT_END, val:'{}'\n"
+      "name:'jYP-27917287424p', path:'.jYP-27917287424p', type:OBJECT_START, "
+      "val:'<null>'\n"
+      "name:'<null>', path:'.jYP-27917287424p', type:OBJECT_END, val:'{}'\n"
+      "name:'<null>', path:'', type:OBJECT_END, "
+      "val:'{"
+      "\"MyWZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+      "ZZZZZZZZZZZZZZZZvf\": {}, \"jYP-27917287424p\": {}}'\n";
 
   char buf[4096] = "";
   ASSERT(json_walk(s, strlen(s), cb, buf) == (int) strlen(s));
@@ -567,7 +578,7 @@ static const char *test_scanf(void) {
 
   {
     const char *str = "{a : null }";
-    char *result = (char *)123;
+    char *result = (char *) 123;
     ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &result) == 0);
     ASSERT(result == NULL);
     free(result);
@@ -582,7 +593,7 @@ static const char *test_scanf(void) {
     ASSERT(a == 2);
     ASSERT(b == true);
     if (sizeof(bool) == 1)
-      ASSERT((char)c == false);
+      ASSERT((char) c == false);
     else
       ASSERT(c == false);
   }
@@ -599,8 +610,8 @@ static const char *test_json_unescape(void) {
 }
 
 static void cb2(void *data, const char *name, size_t name_len, const char *path,
-               const struct json_token *token) {
-  struct json_token *pt = (struct json_token *)data;
+                const struct json_token *token) {
+  struct json_token *pt = (struct json_token *) data;
   pt->ptr = token->ptr;
   pt->len = token->len;
   (void) path;
@@ -616,7 +627,7 @@ static const char *test_parse_string(void) {
   memset(&f, 0, sizeof(f));
   f.end = str + str_len;
   f.cur = str;
-  f.callback_data = (void *)&t;
+  f.callback_data = (void *) &t;
   f.callback = cb2;
 
   ASSERT(parse_string(&f) == 0);
