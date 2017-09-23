@@ -276,6 +276,27 @@ If top-level element is a scalar: `true`
 - type: `JSON_TYPE_TRUE`, name: `NULL`, path: `""`, value: `"true"`
 
 
+## `json_fprintf()`, `json_vfprintf()`
+
+```c
+/*
+ * Same as json_printf, but prints to a file.
+ * File is created if does not exist. File is truncated if already exists.
+ */
+int json_fprintf(const char *file_name, const char *fmt, ...);
+int json_vfprintf(const char *file_name, const char *fmt, va_list ap);
+```
+
+## `json_fread()`
+
+```c
+/*
+ * Read the whole file in memory.
+ * Return malloc-ed file content, or NULL on error. The caller must free().
+ */
+char *json_fread(const char *file_name);
+```
+
 # Contributions
 
 To submit contributions, sign

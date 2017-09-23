@@ -28,10 +28,10 @@
 
 #include "frozen.c"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
 const char *tok_type_names[] = {
     "INVALID", "STRING",       "NUMBER",     "TRUE",        "FALSE",
@@ -648,6 +648,18 @@ static const char *test_eos(void) {
   return NULL;
 }
 
+static const char *test_fprintf(void) {
+  const char *fname = "a.json";
+  char *p;
+  ASSERT(json_fprintf(fname, "{a:%d}", 123) > 0);
+  ASSERT((p = json_fread(fname)) != NULL);
+  ASSERT(strcmp(p, "{\"a\":123}\n") == 0);
+  free(p);
+  remove(fname);
+  ASSERT(json_fread(fname) == NULL);
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_eos);
   RUN_TEST(test_scanf);
@@ -658,6 +670,7 @@ static const char *run_all_tests(void) {
   RUN_TEST(test_callback_api_long_path);
   RUN_TEST(test_json_unescape);
   RUN_TEST(test_parse_string);
+  RUN_TEST(test_fprintf);
   return NULL;
 }
 
