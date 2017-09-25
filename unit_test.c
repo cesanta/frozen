@@ -598,6 +598,18 @@ static const char *test_scanf(void) {
       ASSERT(c == false);
   }
 
+  {
+    const char *str = "{ fa: 1, fb: 2.34, fc: 5.67 }";
+    float a = 1.0, b = 2.34;
+    double c = 5.67;
+    float fa = 0.0, fb = 0.0;
+    double fc = 0.0;
+    ASSERT(json_scanf(str, strlen(str), "{fa: %f, fb: %f, fc: %lf}", &fa, &fb, &fc) == 3);
+    ASSERT(fa == a);
+    ASSERT(fb == b);
+    ASSERT(fc == c);
+  }
+
   return NULL;
 }
 
