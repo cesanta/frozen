@@ -6,9 +6,16 @@ JSON parser and emitter for C/C++
 - ISO C and ISO C++ compliant portable code
 - Very small footprint
 - No dependencies
-- Print and scan directly to/from C/C++ variables
+- `json_scanf()` scans a string directly into C/C++ variables
+- `json_printf()` prints C/C++ variables directly into an output stream
+- `json_setf()` modifies an existing JSON string
+- `json_fread()` reads JSON from a file
+- `json_fprintf()` writes JSON to a file
+- Built-in base64 encoder and decoder for binary data
 - Parser provides low-level callback API and high-level scanf-like API
 - 100% test coverage
+- Used in [Mongoose OS](https://mongoose-os.com), an operating system
+  for connected commercial products on low-power microcontrollers
 
 # API reference
 
@@ -194,7 +201,7 @@ A helper `%M` callback that prints contiguous C arrays.
 Consumes `void *array_ptr, size_t array_size, size_t elem_size, char *fmt`
 Returns number of bytes printed.
 
-## `json_walk()`
+## `json_walk()` - low level parsing API
 
 
 ```c
@@ -295,6 +302,29 @@ int json_vfprintf(const char *file_name, const char *fmt, va_list ap);
  * Return malloc-ed file content, or NULL on error. The caller must free().
  */
 char *json_fread(const char *file_name);
+```
+
+## `json_setf()`, `json_vsetf()`
+
+```c
+/*
+ * Update given JSON string `s,len` by changing the value at given `json_path`.
+ * The result is saved to `out`. If `json_fmt` == NULL, that deletes the key.
+ * If path is not present, missing keys are added. Array path without an
+ * index pushes a value to the end of an array.
+ * Return 1 if the string was changed, 0 otherwise.
+ *
+ * Example:  s is a JSON string { "a": 1, "b": [ 2 ] }
+ *   json_setf(s, len, out, ".a", "7");     // { "a": 7, "b": [ 2 ] }
+ *   json_setf(s, len, out, ".b", "7");     // { "a": 1, "b": 7 }
+ *   json_setf(s, len, out, ".b[]", "7");   // { "a": 1, "b": [ 2,7 ] }
+ *   json_setf(s, len, out, ".b", NULL);    // { "a": 1 }
+ */
+int json_setf(const char *s, int len, struct json_out *out,
+              const char *json_path, const char *json_fmt, ...);
+
+int json_vsetf(const char *s, int len, struct json_out *out,
+               const char *json_path, const char *json_fmt, va_list ap);
 ```
 
 # Contributions

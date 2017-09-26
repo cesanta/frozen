@@ -604,7 +604,8 @@ static const char *test_scanf(void) {
     double c = 5.67;
     float fa = 0.0, fb = 0.0;
     double fc = 0.0;
-    ASSERT(json_scanf(str, strlen(str), "{fa: %f, fb: %f, fc: %lf}", &fa, &fb, &fc) == 3);
+    ASSERT(json_scanf(str, strlen(str), "{fa: %f, fb: %f, fc: %lf}", &fa, &fb,
+                      &fc) == 3);
     ASSERT(fa == a);
     ASSERT(fb == b);
     ASSERT(fc == c);
@@ -672,6 +673,117 @@ static const char *test_fprintf(void) {
   return NULL;
 }
 
+static const char *test_json_setf(void) {
+  char buf[200];
+  const char *s1 = "{ \"a\": 123, \"b\": [ 1 ], \"c\": true }";
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 = "{ \"a\": 7, \"b\": [ 1 ], \"c\": true }";
+    int res = json_setf(s1, strlen(s1), &out, ".a", "%d", 7);
+    ASSERT(res == 1);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 = "{ \"a\": 123, \"b\": false, \"c\": true }";
+    int res = json_setf(s1, strlen(s1), &out, ".b", "%B", 0);
+    ASSERT(res == 1);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 = "{ \"a\": 123, \"b\": [ 2 ], \"c\": true }";
+    int res = json_setf(s1, strlen(s1), &out, ".b[0]", "%d", 2);
+    ASSERT(res == 1);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 = "{ \"b\": [ 1 ], \"c\": true }";
+    int res = json_setf(s1, strlen(s1), &out, ".a", NULL);
+    ASSERT(res == 1);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 = "{ \"a\": 123, \"b\": [ 1 ] }";
+    int res = json_setf(s1, strlen(s1), &out, ".c", NULL);
+    ASSERT(res == 1);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    /* Delete non-existent key */
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s1 = "{\"a\":1}";
+    int res = json_setf(s1, strlen(s1), &out, ".d", NULL);
+    ASSERT(res == 0);
+    ASSERT(strcmp(buf, s1) == 0);
+  }
+
+  {
+    /* Delete non-existent key, spaces in obj */
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    int res = json_setf(s1, strlen(s1), &out, ".d", NULL);
+    ASSERT(res == 0);
+    ASSERT(strcmp(buf, s1) == 0);
+  }
+
+  {
+    /* Change the whole JSON object */
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 = "123";
+    int res = json_setf(s1, strlen(s1), &out, "", "%d", 123);
+    ASSERT(res == 1);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    /* Add missing keys */
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 =
+        "{ \"a\": 123, \"b\": [ 1 ], \"c\": true,\"d\":{\"e\":8} }";
+    int res = json_setf(s1, strlen(s1), &out, ".d.e", "%d", 8);
+    ASSERT(res == 0);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    /* Append to arrays */
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 = "{ \"a\": 123, \"b\": [ 1,2 ], \"c\": true }";
+    int res = json_setf(s1, strlen(s1), &out, ".b[]", "%d", 2);
+    ASSERT(res == 0);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    /* Delete from array */
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 = "{ \"a\": 123, \"b\": [ ], \"c\": true }";
+    int res = json_setf(s1, strlen(s1), &out, ".b[0]", NULL);
+    ASSERT(res == 1);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    /* Create array and push value  */
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 = "{ \"a\": 123, \"b\": [ 1 ], \"c\": true,\"d\":[3] }";
+    int res = json_setf(s1, strlen(s1), &out, ".d[]", "%d", 3);
+    // printf("[%s]\n[%s]\n", buf, s2);
+    ASSERT(res == 0);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_eos);
   RUN_TEST(test_scanf);
@@ -683,6 +795,7 @@ static const char *run_all_tests(void) {
   RUN_TEST(test_json_unescape);
   RUN_TEST(test_parse_string);
   RUN_TEST(test_fprintf);
+  RUN_TEST(test_json_setf);
   return NULL;
 }
 
