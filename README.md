@@ -327,6 +327,27 @@ int json_vsetf(const char *s, int len, struct json_out *out,
                const char *json_path, const char *json_fmt, va_list ap);
 ```
 
+## `json_prettify()`
+
+```c
+/*
+ * Pretty-print JSON string `s,len` into `out`.
+ * Return number of processed bytes in `s`.
+ */
+int json_prettify(const char *s, int len, struct json_out *out);
+```
+
+## `json_prettify_file()`
+
+```c
+/*
+ * Prettify JSON file `file_name`.
+ * Return number of processed bytes, or negative number of error.
+ * On error, file content is not modified.
+ */
+int json_prettify_file(const char *file_name);
+```
+
 # Contributions
 
 To submit contributions, sign

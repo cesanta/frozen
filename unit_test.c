@@ -661,6 +661,15 @@ static const char *test_eos(void) {
   return NULL;
 }
 
+static int compare_file(const char *file_name, const char *s) {
+  int res = -1;
+  char *p = json_fread(file_name);
+  if (p == NULL) return res;
+  res = strcmp(p, s);
+  free(p);
+  return res == 0;
+}
+
 static const char *test_fprintf(void) {
   const char *fname = "a.json";
   char *p;
@@ -784,7 +793,64 @@ static const char *test_json_setf(void) {
   return NULL;
 }
 
+static const char *test_prettify(void) {
+  const char *fname = "a.json";
+  char buf[200];
+
+  {
+    const char *s1 = "{ \"a\":   1, \"b\":2,\"c\":[null,\"aa\",{},true]}";
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 =
+        "{\n  \"a\": 1,\n  \"b\": 2,\n  \"c\": [\n    null,\n    \"aa\",\n    "
+        "{},\n    true\n  ]\n}";
+    ASSERT(json_prettify(s1, strlen(s1), &out) > 0);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
+    remove(fname);
+    ASSERT(json_prettify_file(fname) == -1);
+  }
+
+  {
+    ASSERT(compare_file(fname, "") == -1);
+    json_fprintf(fname, "::");
+    ASSERT(json_prettify_file(fname) == JSON_STRING_INVALID);
+    ASSERT(compare_file(fname, "::\n"));
+    remove(fname);
+  }
+
+  {
+    ASSERT(compare_file(fname, "") == -1);
+    json_fprintf(fname, "{");
+    ASSERT(json_prettify_file(fname) == JSON_STRING_INCOMPLETE);
+    ASSERT(compare_file(fname, "{\n"));
+    remove(fname);
+  }
+
+  {
+    ASSERT(compare_file(fname, "") == -1);
+    json_fprintf(fname, "%d", 123);
+    ASSERT(compare_file(fname, "123\n"));
+    ASSERT(json_prettify_file(fname) > 0);
+    ASSERT(compare_file(fname, "123\n"));
+    remove(fname);
+  }
+
+  {
+    const char *s = "{\n  \"a\": 123\n}\n";
+    ASSERT(compare_file(fname, "") == -1);
+    json_fprintf(fname, "{a:%d}", 123);
+    ASSERT(json_prettify_file(fname) > 0);
+    ASSERT(compare_file(fname, s));
+    remove(fname);
+  }
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
+  RUN_TEST(test_prettify);
   RUN_TEST(test_eos);
   RUN_TEST(test_scanf);
   RUN_TEST(test_errors);
