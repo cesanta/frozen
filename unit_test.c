@@ -849,7 +849,45 @@ static const char *test_prettify(void) {
   return NULL;
 }
 
+static const char *test_json_next(void) {
+  const char *s = "{ \"a\": [], \"b\": [ 1, {} ], \"c\": true }";
+  struct json_token key, val;
+  char buf[100];
+  int len = strlen(s);
+
+  {
+    /* Traverse an object */
+    void *h = NULL;
+    int i = 0;
+    const char *results[] = {"[a] -> [[]]", "[b] -> [[ 1, {} ]]",
+                             "[c] -> [true]"};
+    while ((h = json_next_key(s, len, h, ".", &key, &val)) != NULL) {
+      snprintf(buf, sizeof(buf), "[%.*s] -> [%.*s]", key.len, key.ptr, val.len,
+               val.ptr);
+      ASSERT(strcmp(results[i], buf) == 0);
+      i++;
+    }
+    ASSERT(i == 3);
+  }
+
+  {
+    /* Traverse an array */
+    void *h = NULL;
+    int i = 0, idx;
+    const char *results[] = {"[0] -> [1]", "[1] -> [{}]"};
+    while ((h = json_next_elem(s, len, h, ".b", &idx, &val)) != NULL) {
+      snprintf(buf, sizeof(buf), "[%d] -> [%.*s]", idx, val.len, val.ptr);
+      ASSERT(strcmp(results[i], buf) == 0);
+      i++;
+    }
+    ASSERT(i == 2);
+  }
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
+  RUN_TEST(test_json_next);
   RUN_TEST(test_prettify);
   RUN_TEST(test_eos);
   RUN_TEST(test_scanf);
