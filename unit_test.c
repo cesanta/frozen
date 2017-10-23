@@ -861,7 +861,7 @@ static const char *test_json_next(void) {
     int i = 0;
     const char *results[] = {"[a] -> [[]]", "[b] -> [[ 1, {} ]]",
                              "[c] -> [true]"};
-    while ((h = json_next_key(s, len, h, ".", &key, &val)) != NULL) {
+    while ((h = json_next_key(s, len, h, "", &key, &val)) != NULL) {
       snprintf(buf, sizeof(buf), "[%.*s] -> [%.*s]", key.len, key.ptr, val.len,
                val.ptr);
       ASSERT(strcmp(results[i], buf) == 0);
@@ -877,6 +877,21 @@ static const char *test_json_next(void) {
     const char *results[] = {"[0] -> [1]", "[1] -> [{}]"};
     while ((h = json_next_elem(s, len, h, ".b", &idx, &val)) != NULL) {
       snprintf(buf, sizeof(buf), "[%d] -> [%.*s]", idx, val.len, val.ptr);
+      ASSERT(strcmp(results[i], buf) == 0);
+      i++;
+    }
+    ASSERT(i == 2);
+  }
+
+  {
+    /* Traverse more complex object */
+    const char *s = "{ \"a\": [], \"b\": { \"c\": true, \"d\": 1234 } }";
+    void *h = NULL;
+    int i = 0;
+    const char *results[] = {"[c] -> [true]", "[d] -> [1234]"};
+    while ((h = json_next_key(s, len, h, ".b", &key, &val)) != NULL) {
+      snprintf(buf, sizeof(buf), "[%.*s] -> [%.*s]", key.len, key.ptr, val.len,
+               val.ptr);
       ASSERT(strcmp(results[i], buf) == 0);
       i++;
     }
