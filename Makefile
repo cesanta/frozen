@@ -1,24 +1,27 @@
-PROF = -fprofile-arcs -ftest-coverage -g -O0
-CFLAGS = -W -Wall -pedantic -O3 $(PROF) $(CFLAGS_EXTRA) -std=c99
-CXXFLAGS = -W -Wall -pedantic -O3 $(PROF) $(CFLAGS_EXTRA)
+PROF ?= -fprofile-arcs -ftest-coverage -g -O0
+CFLAGS ?= -W -Wall -pedantic -O3 $(PROF) $(CFLAGS_EXTRA) -std=c99
+CXXFLAGS ?= -W -Wall -pedantic -O3 $(PROF) $(CFLAGS_EXTRA)
+CLFLAGS ?= /DWIN32_LEAN_AND_MEAN /MD /O2 /TC /W2 /WX
 
-.PHONY: clean all
+RD ?= docker run -v $(CURDIR):$(CURDIR) -w $(CURDIR)
+GCC ?= $(RD) docker.cesanta.com/gcc
 
-all: c c++
+.PHONY: clean all vc98 vc2017 c c++
+
+all: ci-test
+ci-test: c c++ vc98 vc2017
 
 c: clean
-	rm -rf *.gc*
-	cc unit_test.c -o unit_test $(CFLAGS) && ./unit_test
-	cc -m32 unit_test.c -o unit_test $(CFLAGS) && ./unit_test
-	gcov -a unit_test.c
+	$(GCC) cc unit_test.c -o unit_test $(CFLAGS) && $(GCC) ./unit_test
+	$(GCC) gcov -a unit_test.c
 
 c++: clean
-	rm -rf *.gc*
-	g++ unit_test.c -o unit_test $(CXXFLAGS) && ./unit_test
-	gcov -a unit_test.c
+	$(GCC) g++ unit_test.c -o unit_test $(CXXFLAGS) && $(GCC) ./unit_test
+	$(GCC) gcov -a unit_test.c
 
-w:
-	wine cl /DEBUG unit_test.c && wine unit_test.exe
+vc98 vc2017:
+	$(RD) docker.cesanta.com/$@ wine cl unit_test.c $(CLFLAGS) /Fe$@.exe
+	$(RD) docker.cesanta.com/$@ wine $@.exe 
 
 clean:
-	rm -rf *.gc* *.dSYM unit_test unit_test.exe
+	rm -rf *.gc* *.dSYM unit_test *.exe *.obj _CL_*
