@@ -1,13 +1,13 @@
 PROF ?= -fprofile-arcs -ftest-coverage -g -O0
-CFLAGS ?= -W -Wall -pedantic -O3 $(PROF) $(CFLAGS_EXTRA) -std=c99
-CXXFLAGS ?= -W -Wall -pedantic -O3 $(PROF) $(CFLAGS_EXTRA)
+CFLAGS ?= -W -Wall -pedantic -O2 -std=c99 $(CFLAGS_EXTRA)
+CXXFLAGS ?= -W -Wall -pedantic -O2 $(CXXFLAGS_EXTRA)
 CLFLAGS ?= /DWIN32_LEAN_AND_MEAN /MD /O2 /TC /W2 /WX
 
 RD = docker run --rm -v $(CURDIR):$(CURDIR) -w $(CURDIR)
 GCC_DOCKER = library/gcc:latest
 AR = $(RD) $(GCC_DOCKER) ar
-CC = $(RD) $(GCC_DOCKER) gcc
-CXX = $(RD) $(GCC_DOCKER) g++
+CC = $(RD) $(GCC_DOCKER) cc
+CXX = $(RD) $(GCC_DOCKER) c++
 GCOV = $(RD) $(GCC_DOCKER) gcov
 
 .PHONY: clean all vc98 vc2017 c c++ test c-test c++-test
@@ -25,11 +25,11 @@ frozen.a: frozen.o
 	$(AR) rcs $@ $^
 
 c-test: clean
-	$(CC) unit_test.c -o unit_test $(CFLAGS) && ./unit_test
+	$(CC) unit_test.c -o unit_test $(CFLAGS) $(PROF) && ./unit_test
 	$(GCOV) -a unit_test.c
 
 c++-test: clean
-	$(CXX) unit_test.c -o unit_test $(CXXFLAGS) && ./unit_test
+	$(CXX) unit_test.c -o unit_test $(CXXFLAGS) $(PROF) && ./unit_test
 	$(GCOV) -a unit_test.c
 
 vc98 vc2017:
