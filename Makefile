@@ -1,5 +1,5 @@
-PROF ?= -fprofile-arcs -ftest-coverage -g -O0
-CFLAGS ?= -W -Wall -pedantic -O2 -std=c99 $(CFLAGS_EXTRA)
+PROF ?= -fprofile-arcs -ftest-coverage -O0
+CFLAGS ?= -W -Wall -pedantic -O2 -std=c99 -g $(CFLAGS_EXTRA)
 CXXFLAGS ?= -W -Wall -pedantic -O2 $(CXXFLAGS_EXTRA)
 CLFLAGS ?= /DWIN32_LEAN_AND_MEAN /MD /O2 /TC /W2 /WX
 
