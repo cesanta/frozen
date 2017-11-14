@@ -34,7 +34,7 @@ c++-test: clean
 
 vc98 vc2017:
 	$(RD) docker.cesanta.com/$@ wine cl unit_test.c $(CLFLAGS) /Fe$@.exe
-	$(RD) docker.cesanta.com/$@ wine $@.exe 
+	$(RD) docker.cesanta.com/$@ wine $@.exe
 
 clean:
 	rm -rf *.gc* *.dSYM unit_test *.exe *.obj _CL_* *.o *.a
