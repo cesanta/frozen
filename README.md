@@ -103,14 +103,13 @@ int json_scanf_array_elem(const char *s, int len,
                           struct json_token *token);
 ```
 
-
-## `json_printf()`
-
 A helper function to scan an array item with given path and index.
 Fills `token` with the matched JSON token.
 Returns 0 if no array element found, otherwise non-0.
 
-The Frozen printing API is pluggable. Out of the box, Frozen provides a way
+## `json_printf()`
+
+Frozen printing API is pluggable. Out of the box, Frozen provides a way
 to print to a string buffer or to an opened file stream. It is easy to
 to tell Frozen to print to another destination, for example, to a socket, etc.
 Frozen does this by defining an "output context" descriptor which has
@@ -378,6 +377,36 @@ void *json_next_key(const char *s, int len, void *handle, const char *path,
 void *json_next_elem(const char *s, int len, void *handle, const char *path,
                      int *idx, struct json_token *val);
 
+```
+
+# Examples
+
+## Print JSON configuration to a file
+
+```c
+json_fprintf("settings.json", "{ a: %d, b: %Q }", 123, "string_value");
+json_prettify_file("settings.json"); // Optional
+```
+
+## Read JSON configuration from a file
+
+```c
+struct my_config { int a; char *b; } c = { .a = 0, .b = NULL };
+char *content = json_fread("settings.json");
+json_scanf(content, strlen(content), "{a: %d, b: %Q}", &c.a, &c.b);
+```
+
+## Modify configuration setting in a JSON file
+
+```c
+const char *settings_file_name = "settings.json", *tmp_file_name = "tmp.json";
+char *content = json_fread(settings_file_name);
+FILE *fp = fopen(tmp_file_name, "w");
+struct json_out out = JSON_OUT_FILE(fp);
+json_setf(content, strlen(content), &out, ".b", "%Q", "new_string_value");
+fclose(fp);
+json_prettify_file(tmp_file_name);  // Optional
+rename(tmp_file_name, settings_file_name);
 ```
 
 # Contributions
