@@ -553,6 +553,15 @@ static const char *test_scanf(void) {
   }
 
   {
+    const char *str = "{a : [\"foo\", \"\", \"a\"] }";
+    struct json_token t;
+    ASSERT(json_scanf_array_elem(str, strlen(str), ".a", 0, &t) == 3);
+    ASSERT(json_scanf_array_elem(str, strlen(str), ".a", 1, &t) == 0);
+    ASSERT(json_scanf_array_elem(str, strlen(str), ".a", 2, &t) == 1);
+    ASSERT(json_scanf_array_elem(str, strlen(str), ".a", 3, &t) == -1);
+  }
+
+  {
     const char *str = "{a : \"foo\\b\\f\\n\\r\\t\\\\\" }";
     char *result;
     ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &result) == 1);
