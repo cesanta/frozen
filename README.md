@@ -417,6 +417,8 @@ and send GitHub pull request. You retain the copyright on your contributions.
 
 # Licensing
 
-Frozen is released under Commercial and [GNU GPLv.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
+Frozen is released under the
+[Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0).
 
-Commercial Projects: [Contact us for the commercial license.](https://www.mongoose-os.com/contact.html)
+For commercial support and professional services,
+[contact us](https://www.mongoose-os.com/contact.html).
