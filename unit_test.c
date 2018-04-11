@@ -935,7 +935,24 @@ static const char *test_json_next(void) {
   return NULL;
 }
 
+static const char *test_json_sprintf(void) {
+  {
+    char *s = json_asprintf("%H", 3, "abc");
+    const char *result = "\"616263\"";
+    ASSERT(strcmp(s, result) == 0);
+    free(s);
+  }
+  {
+    char *s = json_asprintf("{a:%d,b:%V}", 77, "hi", 2);
+    const char *result = "{\"a\":77,\"b\":\"aGk=\"}";
+    ASSERT(strcmp(s, result) == 0);
+    free(s);
+  }
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
+  RUN_TEST(test_json_sprintf);
   RUN_TEST(test_json_next);
   RUN_TEST(test_prettify);
   RUN_TEST(test_eos);

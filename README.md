@@ -293,6 +293,24 @@ int json_fprintf(const char *file_name, const char *fmt, ...);
 int json_vfprintf(const char *file_name, const char *fmt, va_list ap);
 ```
 
+## `json_sprintf()`, `json_vsprintf()`
+
+```c
+/*
+ * Print JSON into an allocated 0-terminated string.
+ * Return allocated string, or NULL on error.
+ * Example:
+ *
+ * ```c
+ *   char *str = json_asprintf("{a:%H}", 3, "abc");
+ *   printf("%s\n", str);  // Prints "616263"
+ *   free(str);
+ * ```
+ */
+char *json_asprintf(const char *fmt, ...);
+char *json_vasprintf(const char *fmt, va_list ap);
+```
+
 ## `json_fread()`
 
 ```c
