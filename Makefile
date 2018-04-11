@@ -23,5 +23,9 @@ vc98 vc2017:
 	$(RD) docker.cesanta.com/$@ wine cl unit_test.c $(CLFLAGS) /Fe$@.exe
 	$(RD) docker.cesanta.com/$@ wine $@.exe 
 
+coverity: clean
+	rm -rf cov-int
+	nice cov-build --dir cov-int $(MAKE) c GCC= COVERITY=1
+
 clean:
 	rm -rf *.gc* *.dSYM unit_test *.exe *.obj _CL_*

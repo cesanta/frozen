@@ -687,6 +687,7 @@ static const char *test_eos(void) {
   size_t n = 999;
   char *buf = (char *) malloc(n);
   int s_len = strlen(s), a = 0;
+  ASSERT(buf != NULL);
   memset(buf, 'x', n);
   memcpy(buf, s, s_len);
   ASSERT(json_scanf(buf, n, "{a:%d}", &a) == 1);
@@ -708,7 +709,8 @@ static const char *test_fprintf(void) {
   const char *result = "{\"a\":123}\n";
   char *p;
   ASSERT(json_fprintf(fname, "{a:%d}", 123) > 0);
-  ASSERT((p = json_fread(fname)) != NULL);
+  p = json_fread(fname);
+  ASSERT(p != NULL);
   ASSERT(strcmp(p, result) == 0);
   free(p);
   remove(fname);
@@ -877,7 +879,7 @@ static const char *test_prettify(void) {
     json_fprintf(fname, "{a:%d}", 123);
     ASSERT(json_prettify_file(fname) > 0);
     ASSERT(compare_file(fname, s));
-    remove(fname);
+    (void) remove(fname);
   }
 
   return NULL;
