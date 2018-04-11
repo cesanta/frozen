@@ -293,7 +293,7 @@ int json_fprintf(const char *file_name, const char *fmt, ...);
 int json_vfprintf(const char *file_name, const char *fmt, va_list ap);
 ```
 
-## `json_sprintf()`, `json_vsprintf()`
+## `json_asprintf()`, `json_vasprintf()`
 
 ```c
 /*
