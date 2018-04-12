@@ -692,6 +692,7 @@ static const char *test_eos(void) {
   memcpy(buf, s, s_len);
   ASSERT(json_scanf(buf, n, "{a:%d}", &a) == 1);
   ASSERT(a == 12345);
+  free(buf);
   return NULL;
 }
 
