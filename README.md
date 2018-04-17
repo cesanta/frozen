@@ -42,13 +42,22 @@ Scans the JSON string `str`, performing scanf-like conversions according to `fmt
       json_scanf(str, strlen(str), "{c: %B}", &value);
       ```
 3. Several extra format specifiers are supported:
-   - `%B`: consumes `int *`, expects boolean `true` or `false`.
-   - `%Q`: consumes `char **`, expects quoted, JSON-encoded string. A scanned
-      string is malloc-ed, caller must free() the string. The scanned string
-      is a JSON decoded, unescaped UTF-8 string.
-   - `%M`: consumes custom scanning function pointer and
+   - %B: consumes `int *` (or `char *`, if `sizeof(bool) == sizeof(char)`),
+      expects boolean `true` or `false`.
+   - %Q: consumes `char **`, expects quoted, JSON-encoded string. Scanned
+      string is malloc-ed, caller must free() the string.
+   - %V: consumes `char **`, `int *`. Expects base64-encoded string.
+      Result string is base64-decoded, malloced and NUL-terminated.
+      The length of result string is stored in `int *` placeholder.
+      Caller must free() the result.
+   - %H: consumes `int *`, `char **`.
+      Expects a hex-encoded string, e.g. "fa014f".
+      Result string is hex-decoded, malloced and NUL-terminated.
+      The length of the result string is stored in `int *` placeholder.
+      Caller must free() the result.
+   - %M: consumes custom scanning function pointer and
       `void *user_data` parameter - see json_scanner_t definition.
-   - `%T`: consumes `struct json_token *`, fills it out with matched token.
+   - %T: consumes `struct json_token *`, fills it out with matched token.
 
 Returns the number of elements successfully scanned & converted.
 Negative number means scan error.
@@ -148,20 +157,17 @@ int json_printf(struct json_out *, const char *fmt, ...);
 int json_vprintf(struct json_out *, const char *fmt, va_list ap);
 ```
 
-Generates formatted output into a given sting buffer.
-String values escape when printed (see `%M` specifier).
-This is a superset of the printf() function, with extra format specifiers:
-- `%B` prints JSON boolean, `true` or `false`. Accepts an `int`.
-- `%Q` prints quoted escaped string or `null`. Accepts a `const char *`.
-- `%.*Q` like `%Q` but accepts the length of the string explicitly, pretty much like `%.*s`.
-Embedded NUL bytes are supported and will be properly encoded as `\u0000`.
-Accepts an `int` length and a `const char *`.
-- `%M` invokes a json_printf_callback_t function. That callback function
-can consume more parameters.
+Generate formatted output into a given sting buffer, auto-escaping keys.
+This is a superset of printf() function, with extra format specifiers:
+ - `%B` print json boolean, `true` or `false`. Accepts an `int`.
+ - `%Q` print quoted escaped string or `null`. Accepts a `const char *`.
+ - `%.*Q` same as `%Q`, but with length. Accepts `int`, `const char *`
+ - `%V` print quoted base64-encoded string. Accepts a `const char *`, `int`.
+ - `%H` print quoted hex-encoded string. Accepts a `int`, `const char *`.
+ - `%M` invokes a json_printf_callback_t function. That callback function
+ can consume more parameters.
 
-`json_printf()` also auto-escapes keys.
-
-Returns the number of bytes printed. If the return value is bigger then the
+Return number of bytes printed. If the return value is bigger than the
 supplied buffer, that is an indicator of overflow. In the overflow case,
 overflown bytes are not printed.
 
