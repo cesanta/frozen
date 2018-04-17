@@ -437,7 +437,7 @@ rename(tmp_file_name, settings_file_name);
 
 To submit contributions, sign
 [Cesanta CLA](https://docs.cesanta.com/contributors_la.shtml)
-and send GitHub pull request. You retain the copyright on your contributions.
+and send GitHub pull request.
 
 # Licensing
 
