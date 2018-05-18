@@ -81,7 +81,7 @@ Example - scan arbitrary JSON string:
     struct json_token t;
     int i;
     printf("Parsing array: %.*s\n", len, str);
-    for (i = 0; json_scanf_array_elem(str, len, ".x", i, &t) > 0; i++) {
+    for (i = 0; json_scanf_array_elem(str, len, "", i, &t) > 0; i++) {
       printf("Index %d, token [%.*s]\n", i, t.len, t.ptr);
     }
   }
