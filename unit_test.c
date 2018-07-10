@@ -644,6 +644,17 @@ static const char *test_scanf(void) {
     ASSERT(fabs(fc - c) < FLT_EPSILON);
   }
 
+  {
+    int v = -1;
+    ASSERT(json_scanf("0x", 2, "%i", &v) == 0); // Incomplete string
+    ASSERT(json_scanf("0xe", 3, "%i", &v) == 1);
+    ASSERT(v == 14);
+    ASSERT(json_scanf("0x12", 4, "%i", &v) == 1);
+    ASSERT(v == 18);
+    ASSERT(json_scanf("12", 2, "%i", &v) == 1);
+    ASSERT(v == 12);
+  }
+
   return NULL;
 }
 
