@@ -403,6 +403,13 @@ void *json_next_elem(const char *s, int len, void *handle, const char *path,
 
 ```
 
+# Minimal mode
+
+By building with `-DJSON_MINIMAL=1` footprint can be significantly reduced.
+The following limitations apply in this configuration:
+ * Only integer numbers are supported. This affects parsing and `%f/%lf` conversions in printf and scanf.
+ * Hex ('%H') and base64 (`%V`) conversions are disabled.
+
 # Examples
 
 ## Print JSON configuration to a file

@@ -39,10 +39,10 @@ const char *tok_type_names[] = {
     "NULL",    "OBJECT_START", "OBJECT_END", "ARRAY_START", "ARRAY_END",
 };
 
-#define FAIL(str, line)                           \
-  do {                                            \
-    printf("Fail on line %d: [%s]\n", line, str); \
-    return str;                                   \
+#define FAIL(str, line)                                    \
+  do {                                                     \
+    fprintf(stderr, "Fail on line %d: [%s]\n", line, str); \
+    return str;                                            \
   } while (0)
 
 #define ASSERT(expr)                    \
@@ -155,8 +155,8 @@ static const char *test_json_printf(void) {
 
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
-    const char *result = "42";
-    json_printf(&out, "%d", 42);
+    const char *result = "42 42";
+    json_printf(&out, "%ld %d", 42, 42);
     ASSERT(strcmp(buf, result) == 0);
   }
 
@@ -171,10 +171,7 @@ static const char *test_json_printf(void) {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     const char *result = "12 42";
     size_t foo = 12;
-    json_printf(&out,
-                "%lu"
-                " %d",
-                foo, 42);
+    json_printf(&out, "%lu %d", foo, 42);
     ASSERT(strcmp(buf, result) == 0);
   }
 
@@ -228,17 +225,17 @@ static const char *test_json_printf(void) {
 
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
-    const char *result = "{\"a\": \"\\\"\\\\\\r\\nя\\t\\u0002\"}";
-    json_printf(&out, "{a: %Q}", "\"\\\r\nя\t\x02");
+    const char *arr[] = {"hi", "there", NULL};
+    const char *result = "[\"hi\", \"there\", null]";
+    json_printf(&out, "%M", json_printf_array, arr, sizeof(arr), sizeof(arr[0]),
+                "%Q");
     ASSERT(strcmp(buf, result) == 0);
   }
 
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
-    const char *arr[] = {"hi", "there", NULL};
-    const char *result = "[\"hi\", \"there\", null]";
-    json_printf(&out, "%M", json_printf_array, arr, sizeof(arr), sizeof(arr[0]),
-                "%Q");
+    const char *result = "{\"a\": \"\\\"\\\\\\r\\nя\\t\\u0002\"}";
+    json_printf(&out, "{a: %Q}", "\"\\\r\nя\t\x02");
     ASSERT(strcmp(buf, result) == 0);
   }
 
@@ -306,7 +303,7 @@ static const char *test_json_printf(void) {
     ASSERT(json_printf(&out, "a_b0: %d", 1) > 0);
     ASSERT(strcmp(buf, result) == 0);
   }
-
+#if JSON_ENABLE_BASE64
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     const char *result = "\"YTI=\"";
@@ -322,7 +319,8 @@ static const char *test_json_printf(void) {
     ASSERT(json_printf(&out, "%V", "\x00 \x01 \x02 abc", 9) > 0);
     ASSERT(strcmp(buf, result) == 0);
   }
-
+#endif /* JSON_ENABLE_BASE64 */
+#if JSON_ENABLE_HEX
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     const char *result = "\"002001200220616263\"";
@@ -330,7 +328,7 @@ static const char *test_json_printf(void) {
     ASSERT(json_printf(&out, "%H", 9, "\x00 \x01 \x02 abc") > 0);
     ASSERT(strcmp(buf, result) == 0);
   }
-
+#endif /* JSON_ENABLE_HEX */
   {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     memset(buf, 0, sizeof(buf));
@@ -578,7 +576,7 @@ static const char *test_scanf(void) {
     ASSERT(strcmp(result, "привет") == 0);
     free(result);
   }
-
+#if JSON_ENABLE_BASE64
   {
     const char *str = "{a : \"YTI=\" }";
     int len;
@@ -586,16 +584,6 @@ static const char *test_scanf(void) {
     ASSERT(json_scanf(str, strlen(str), "{a: %V}", &result, &len) == 1);
     ASSERT(len == 2);
     ASSERT(strcmp(result, "a2") == 0);
-    free(result);
-  }
-
-  {
-    const char *str = "{a : \"61626320\" }";
-    int len = 0;
-    char *result = NULL;
-    ASSERT(json_scanf(str, strlen(str), "{a: %H}", &len, &result) == 1);
-    ASSERT(len == 4);
-    ASSERT(strcmp(result, "abc ") == 0);
     free(result);
   }
 
@@ -608,7 +596,18 @@ static const char *test_scanf(void) {
     ASSERT(strcmp(result, "приветы") == 0);
     free(result);
   }
-
+#endif /* JSON_ENABLE_BASE64 */
+#if JSON_ENABLE_HEX
+  {
+    const char *str = "{a : \"61626320\" }";
+    int len = 0;
+    char *result = NULL;
+    ASSERT(json_scanf(str, strlen(str), "{a: %H}", &len, &result) == 1);
+    ASSERT(len == 4);
+    ASSERT(strcmp(result, "abc ") == 0);
+    free(result);
+  }
+#endif /* JSON_ENABLE_HEX */
   {
     const char *str = "{a : null }";
     char *result = (char *) 123;
@@ -625,34 +624,53 @@ static const char *test_scanf(void) {
     ASSERT(json_scanf(str, strlen(str), "{a:%d, b:%B, c:%B}", &a, &b, &c) == 3);
     ASSERT(a == 2);
     ASSERT(b == true);
-    if (sizeof(bool) == 1)
+    if (sizeof(bool) == 1) {
       ASSERT((char) c == false);
-    else
+    } else {
       ASSERT(c == false);
+    }
   }
 
   {
     const char *str = "{ fa: 1, fb: 2.34, fc: 5.67 }";
-    float a = 1.0f, b = 2.34f;
-    double c = 5.67;
+    const char *fmt = "{fa: %f, fb: %f, fc: %lf}";
     float fa = 0.0, fb = 0.0;
     double fc = 0.0;
-    ASSERT(json_scanf(str, strlen(str), "{fa: %f, fb: %f, fc: %lf}", &fa, &fb,
-                      &fc) == 3);
+#if !JSON_MINIMAL
+    float a = 1.0f, b = 2.34f;
+    double c = 5.67;
+    ASSERT(json_scanf(str, strlen(str), fmt, &fa, &fb, &fc) == 3);
     ASSERT(fa == a);
     ASSERT(fb == b);
     ASSERT(fabs(fc - c) < FLT_EPSILON);
+#else
+    ASSERT(json_scanf(str, strlen(str), fmt, &fa, &fb, &fc) == 0);
+#endif
   }
 
   {
     int v = -1;
-    ASSERT(json_scanf("0x", 2, "%i", &v) == 0); // Incomplete string
+    long lv = -1;
+    const char *s = "{\"v\": 0x12, \"lv\": 0x34}";
+    ASSERT(json_scanf("0x", 2, "%i", &v) == 0);  // Incomplete string
     ASSERT(json_scanf("0xe", 3, "%i", &v) == 1);
-    ASSERT(v == 14);
-    ASSERT(json_scanf("0x12", 4, "%i", &v) == 1);
-    ASSERT(v == 18);
+    ASSERT(v == 0xe);
     ASSERT(json_scanf("12", 2, "%i", &v) == 1);
     ASSERT(v == 12);
+    // %d and %ld accept hex
+    ASSERT(json_scanf(s, strlen(s), "{lv:%ld, v:%d}", &lv, &v) == 2);
+    ASSERT(v == 0x12);
+    ASSERT(lv == 0x34);
+  }
+
+  {
+    unsigned int v = 0;
+    unsigned long lv = 0;
+    const char *s = "{\"v\": 0x12, \"lv\": 0x34}";
+    // %u and %lu accept hex
+    ASSERT(json_scanf(s, strlen(s), "{lv:%lu, v:%u}", &lv, &v) == 2);
+    ASSERT(v == 0x12);
+    ASSERT(lv == 0x34);
   }
 
   return NULL;
@@ -687,7 +705,7 @@ static const char *test_parse_string(void) {
   f.callback_data = (void *) &t;
   f.callback = cb2;
 
-  ASSERT(parse_string(&f) == 0);
+  ASSERT(json_parse_string(&f) == 0);
   ASSERT(strncmp(t.ptr, " foo\\bar", t.len) == 0);
 
   return NULL;
@@ -898,15 +916,15 @@ static const char *test_prettify(void) {
 }
 
 static const char *test_json_next(void) {
-  const char *s = "{ \"a\": [], \"b\": [ 1, {} ], \"c\": true }";
   struct json_token key, val;
   char buf[100];
-  int len = strlen(s);
 
   {
     /* Traverse an object */
     void *h = NULL;
     int i = 0;
+    const char *s = "{ \"a\": [], \"b\": [ 1, {} ], \"c\": true }";
+    int len = strlen(s);
     const char *results[] = {"[a] -> [[]]", "[b] -> [[ 1, {} ]]",
                              "[c] -> [true]"};
     while ((h = json_next_key(s, len, h, "", &key, &val)) != NULL) {
@@ -922,6 +940,8 @@ static const char *test_json_next(void) {
     /* Traverse an array */
     void *h = NULL;
     int i = 0, idx;
+    const char *s = "{ \"a\": [], \"b\": [ 1, {} ], \"c\": true }";
+    int len = strlen(s);
     const char *results[] = {"[0] -> [1]", "[1] -> [{}]"};
     while ((h = json_next_elem(s, len, h, ".b", &idx, &val)) != NULL) {
       snprintf(buf, sizeof(buf), "[%d] -> [%.*s]", idx, val.len, val.ptr);
@@ -933,9 +953,10 @@ static const char *test_json_next(void) {
 
   {
     /* Traverse more complex object */
-    const char *s = "{ \"a\": [], \"b\": { \"c\": true, \"d\": 1234 } }";
+    const char *s = "{ \"a\": 123, \"b\": { \"c\": true, \"d\": 1234 } }";
     void *h = NULL;
     int i = 0;
+    int len = strlen(s);
     const char *results[] = {"[c] -> [true]", "[d] -> [1234]"};
     while ((h = json_next_key(s, len, h, ".b", &key, &val)) != NULL) {
       snprintf(buf, sizeof(buf), "[%.*s] -> [%.*s]", key.len, key.ptr, val.len,
@@ -949,24 +970,33 @@ static const char *test_json_next(void) {
   return NULL;
 }
 
-static const char *test_json_sprintf(void) {
-  {
-    char *s = json_asprintf("%H", 3, "abc");
-    const char *result = "\"616263\"";
-    ASSERT(strcmp(s, result) == 0);
-    free(s);
-  }
-  {
-    char *s = json_asprintf("{a:%d,b:%V}", 77, "hi", 2);
-    const char *result = "{\"a\":77,\"b\":\"aGk=\"}";
-    ASSERT(strcmp(s, result) == 0);
-    free(s);
-  }
+static const char *test_json_printf_hex(void) {
+  char *s = json_asprintf("%H", 3, "abc");
+#if JSON_ENABLE_HEX
+  const char *r = "\"616263\"";
+  ASSERT(strcmp(s, r) == 0);
+#else
+  ASSERT(s == NULL);
+#endif
+  free(s);
+  return NULL;
+}
+
+static const char *test_json_printf_base64(void) {
+  char *s = json_asprintf("{a:%d,b:%V}", 77, "hi", 2);
+#if JSON_ENABLE_BASE64
+  const char *r = "{\"a\":77,\"b\":\"aGk=\"}";
+#else
+  const char *r = "{\"a\":77,\"b\":}";
+#endif
+  ASSERT(strcmp(s, r) == 0);
+  free(s);
   return NULL;
 }
 
 static const char *run_all_tests(void) {
-  RUN_TEST(test_json_sprintf);
+  RUN_TEST(test_json_printf_hex);
+  RUN_TEST(test_json_printf_base64);
   RUN_TEST(test_json_next);
   RUN_TEST(test_prettify);
   RUN_TEST(test_eos);

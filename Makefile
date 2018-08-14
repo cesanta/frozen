@@ -9,7 +9,11 @@ GCC ?= $(RD) docker.cesanta.com/gcc
 .PHONY: all asan c c++ clean vc98 vc2017
 
 all: ci-test
-ci-test: asan c c++ vc98 vc2017
+
+ci-test: asan c c++ minimal vc98 vc2017
+
+minimal:
+	$(MAKE) asan c c++ CFLAGS_EXTRA=-DJSON_MINIMAL=1
 
 c: clean
 	$(GCC) cc unit_test.c -o unit_test $(CFLAGS) $(PROF) && $(GCC) ./unit_test
