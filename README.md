@@ -68,12 +68,11 @@ Example - scan arbitrary JSON string:
   // str has the following JSON string (notice keys are out of order):
   // { "a": 123, "d": true, "b": [1, 2], "c": "hi" }
 
-  int a, b;
-  char *c;
+  int a = 0, d = 0;
+  char *c = NULL;
   void *my_data = NULL;
   json_scanf(str, strlen(str), "{ a:%d, b:%M, c:%Q, d:%B }",
-             &a, scan_array, my_data, &c, &b);
-
+             &a, scan_array, my_data, &c, &d);
 
   // This function is called by json_scanf() call above.
   // str is "[1, 2]", user_data is my_data.
