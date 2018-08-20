@@ -761,6 +761,16 @@ static const char *test_json_setf(void) {
   }
 
   {
+    /* Add Key with length > 1 */
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    const char *s2 =
+        "{ \"a\": 123, \"b\": [ 1 ], \"c\": true,\"foo\":{\"bar\":42} }";
+    int res = json_setf(s1, strlen(s1), &out, ".foo.bar", "%d", 42);
+    ASSERT(res == 0);
+    ASSERT(strcmp(buf, s2) == 0);
+  }
+
+  {
     struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
     const char *s2 = "{ \"a\": 123, \"b\": false, \"c\": true }";
     int res = json_setf(s1, strlen(s1), &out, ".b", "%B", 0);
