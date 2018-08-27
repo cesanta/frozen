@@ -286,6 +286,38 @@ If top-level element is an array: `[1, {"foo": 2}]`
 If top-level element is a scalar: `true`
 - type: `JSON_TYPE_TRUE`, name: `NULL`, path: `""`, value: `"true"`
 
+## `json_walk_args()` - low level parsing API extensible interface
+
+This function is identical to json_walk() except that it takes a
+struct pointer argument for the `callback` and `callback_data`
+arguments and additional configuration elements:
+
+```
+struct frozen_args {
+  json_walk_callback_t callback;
+  void *callback_data;
+  int limit;
+};
+```
+
+This struct must be initialized using `INIT_FROZEN_ARGS()` to retain
+forward compatibility before any members are set as illustrated here:
+
+```
+struct frozen_args args[1];
+
+INIT_FROZEN_ARGS(args);
+
+args->callback = mycb;
+args->callback_data = data;
+args->limit = 20;
+
+ret = json_walk_args(string, len, args);
+```
+
+the `limit` member of `struct frozen_args` can be set to limit the
+maximum recursion depth to prevent possible stack overflows and limit
+parsing complexity.
 
 ## `json_fprintf()`, `json_vfprintf()`
 
