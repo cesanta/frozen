@@ -341,8 +341,27 @@ static const char *test_json_printf(void) {
     const char *result = "<\"array\">0f";
     memset(buf, 0, sizeof(buf));
     ASSERT(json_printf(&out, "<array>%02x", 15) > 0);
-    printf("[%s]\n", buf);
     ASSERT(strcmp(buf, result) == 0);
+  }
+
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    double arr[] = {9.32156, 3.1415926};
+#if !defined(_MSC_VER) || _MSC_VER >= 1700
+    const char *result = "[9.32e+00, 3.14e+00]";  // Modern compilers
+#else
+    const char *result = "[9.32e+000, 3.14e+000]";  // Old VC98 compiler
+#endif
+    json_printf(&out, "%M", json_printf_array, arr, sizeof(arr), sizeof(arr[0]),
+                "%.2e");
+    ASSERT(strcmp(buf, result) == 0);
+  }
+  {
+    struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+    double arr[] = {9.32156, 3.1415926};
+    json_printf(&out, "%M", json_printf_array, arr, sizeof(arr), sizeof(arr[0]),
+                "%.4g");
+    ASSERT(strcmp(buf, "[9.322, 3.142]") == 0);
   }
 
   return NULL;
