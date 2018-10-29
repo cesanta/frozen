@@ -119,7 +119,7 @@ Returns 0 if no array element found, otherwise non-0.
 
 Frozen printing API is pluggable. Out of the box, Frozen provides a way
 to print to a string buffer or to an opened file stream. It is easy to
-to tell Frozen to print to another destination, for example, to a socket, etc.
+tell Frozen to print to another destination, for example, to a socket, etc.
 Frozen does this by defining an "output context" descriptor which has
 a pointer to a low-level printing function. If you want to print to another
 destination, just define your specific printing function and initialise
@@ -156,7 +156,7 @@ int json_printf(struct json_out *, const char *fmt, ...);
 int json_vprintf(struct json_out *, const char *fmt, va_list ap);
 ```
 
-Generate formatted output into a given sting buffer, auto-escaping keys.
+Generate formatted output into a given string buffer, auto-escaping keys.
 This is a superset of printf() function, with extra format specifiers:
  - `%B` print json boolean, `true` or `false`. Accepts an `int`.
  - `%Q` print quoted escaped string or `null`. Accepts a `const char *`.
