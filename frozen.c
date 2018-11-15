@@ -581,6 +581,16 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         snprintf(buf, sizeof(buf), "%lu", (unsigned long) val);
         len += out->printer(out, buf, strlen(buf));
         skip += 1;
+      } else if (fmt[1] == 'j' && fmt[2] == 'd') {
+        size_t val = va_arg(ap, size_t);
+        snprintf(buf, sizeof(buf), "%jd", (intmax_t) val);
+        len += out->printer(out, buf, strlen(buf));
+        skip += 1;
+      } else if (fmt[1] == 'j' && fmt[2] == 'u') {
+        size_t val = va_arg(ap, size_t);
+        snprintf(buf, sizeof(buf), "%ju", (uintmax_t) val);
+        len += out->printer(out, buf, strlen(buf));
+        skip += 1;
       } else if (fmt[1] == 'M') {
         json_printf_callback_t f = va_arg(ap, json_printf_callback_t);
         len += f(out, &ap);
