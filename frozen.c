@@ -546,14 +546,12 @@ static int b64dec(const char *src, int n, char *dst) {
 }
 #endif /* JSON_ENABLE_BASE64 */
 
-#if JSON_ENABLE_HEX
 static unsigned char hexdec(const char *s) {
 #define HEXTOI(x) (x >= '0' && x <= '9' ? x - '0' : x - 'W')
   int a = tolower(*(const unsigned char *) s);
   int b = tolower(*(const unsigned char *) (s + 1));
   return (HEXTOI(a) << 4) | HEXTOI(b);
 }
-#endif /* JSON_ENABLE_HEX */
 
 int json_vprintf(struct json_out *out, const char *fmt, va_list xap) WEAK;
 int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
@@ -865,13 +863,27 @@ int json_unescape(const char *src, int slen, char *dst, int dlen) WEAK;
 int json_unescape(const char *src, int slen, char *dst, int dlen) {
   char *send = (char *) src + slen, *dend = dst + dlen, *orig_dst = dst, *p;
   const char *esc1 = "\"\\/bfnrt", *esc2 = "\"\\/\b\f\n\r\t";
+  int utf8;
+  int i;
 
   while (src < send) {
     if (*src == '\\') {
       if (++src >= send) return JSON_STRING_INCOMPLETE;
       if (*src == 'u') {
-        /* TODO(lsm): \uXXXX escapes drag utf8 lib... Do it at some stage */
-        return JSON_STRING_INVALID;
+        if((src + 4) >= send) return JSON_STRING_INCOMPLETE;
+		for (i = 1; i <= 4; i++) 
+			if( !json_isxdigit(src[i]) ) return JSON_STRING_INCOMPLETE;
+        utf8 = ((int)hexdec(&src[1]) << 8) | hexdec(&src[3]);
+        if( (utf8 > 0x1F) && ((utf8 & 0xFF80) == 0x0000) ) {
+            //convert if greater 0x1F and 7bit ASCII
+            if(dst < dend) *dst = (char)utf8;
+            src += 4;
+        } else {
+            //copy utf encoding as is
+            if(dst < dend) *dst = '\\';
+            dst++;
+            if(dst < dend) *dst = 'u';
+        }
       } else if ((p = (char *) strchr(esc1, *src)) != NULL) {
         if (dst < dend) *dst = esc2[p - esc1];
       } else {

@@ -595,6 +595,31 @@ static const char *test_scanf(void) {
     ASSERT(strcmp(result, "привет") == 0);
     free(result);
   }
+  
+  {
+	/* Test invalid (less than 4 bytes) utf8-code */
+	const char *str = "{a : \"\x5Cuabc\" }";
+	char *result;
+	ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &result) == 0);
+  }
+
+  {
+	/* Test invalid (non-hex) utf8-code */
+	const char *str = "{a : \"\x5CuWXYZ\" }";
+	char *result;
+	ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &result) == 0);
+  }
+  
+  {
+    /* Test basic utf-8 handling */
+    //bypass UTF-8 decoding of compiler by using '\x5C' for backslash
+    const char *str = "{a : \"\x5CuC384\x5Cu0041\x5Cu0007\" }";
+    char *result;
+
+    ASSERT(json_scanf(str, strlen(str), "{a: %Q}", &result) == 1);
+    ASSERT(strcmp(result, "\x5CuC384A\x5Cu0007") == 0);
+    free(result);
+  }
 #if JSON_ENABLE_BASE64
   {
     const char *str = "{a : \"YTI=\" }";
