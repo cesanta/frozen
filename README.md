@@ -113,7 +113,7 @@ int json_scanf_array_elem(const char *s, int len,
 
 A helper function to scan an array item with given path and index.
 Fills `token` with the matched JSON token.
-Returns 0 if no array element found, otherwise non-0.
+Returns -1 if no array element found, otherwise non-negative token length.
 
 ## `json_printf()`
 
