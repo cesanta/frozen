@@ -629,19 +629,38 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
           len += json_escape(out, p, l);
           len += out->printer(out, quote, 1);
         }
+      } else if (fmt[1] == 's' ||
+                 (fmt[1] == '.' && fmt[2] == '*' && fmt[3] == 's')) {
+        size_t l = 0;
+        const char *p;
+
+        if (fmt[1] == '.') {
+          l = (size_t) va_arg(ap, int);
+          skip += 2;
+        }
+        p = va_arg(ap, char *);
+
+        if (p == NULL) {
+          len += out->printer(out, null, 4);
+        } else {
+          if (fmt[1] == 's') {
+            l = strlen(p);
+          }
+          if (l == 0) 
+          { 
+              printf("zero\n"); 
+          }
+          len += out->printer(out, p, l);
+        }
       } else {
         /*
          * we delegate printing to the system printf.
          * The goal here is to delegate all modifiers parsing to the system
          * printf, as you can see below we still have to parse the format
          * types.
-         *
-         * Currently, %s with strings longer than 20 chars will require
-         * double-buffering (an auxiliary buffer will be allocated from heap).
-         * TODO(dfrank): reimplement %s and %.*s in order to avoid that.
          */
 
-        const char *end_of_format_specifier = "sdfFeEgGlhuIcx.*-0123456789";
+        const char *end_of_format_specifier = "dfFeEgGlhuIcx.*-0123456789";
         int n = strspn(fmt + 1, end_of_format_specifier);
         char *pbuf = buf;
         int need_len, size = sizeof(buf);
