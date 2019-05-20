@@ -696,10 +696,19 @@ static const char *test_scanf(void) {
 }
 
 static const char *test_json_unescape(void) {
+  char buf[1];
   ASSERT(json_unescape("foo", 3, NULL, 0) == 3);
   ASSERT(json_unescape("foo\\", 4, NULL, 0) == JSON_STRING_INCOMPLETE);
   ASSERT(json_unescape("foo\\x", 5, NULL, 0) == JSON_STRING_INVALID);
-  ASSERT(json_unescape("\\ueeee", 5, NULL, 0) == JSON_STRING_INVALID);
+  ASSERT(json_unescape("\\ueeee", 5, NULL, 0) == JSON_STRING_INCOMPLETE);
+  ASSERT(json_unescape("\\ueeee", 6, NULL, 0) == JSON_STRING_INVALID);
+  // Simple one-byte escapes should work
+  ASSERT(json_unescape("\\u0026", 2, NULL, 0) == JSON_STRING_INCOMPLETE);
+  ASSERT(json_unescape("\\u0026", 3, NULL, 0) == JSON_STRING_INCOMPLETE);
+  ASSERT(json_unescape("\\u0026", 4, NULL, 0) == JSON_STRING_INCOMPLETE);
+  ASSERT(json_unescape("\\u0026", 5, NULL, 0) == JSON_STRING_INCOMPLETE);
+  ASSERT(json_unescape("\\u0026", 6, buf, sizeof(buf)) == 1);
+  ASSERT(buf[0] == '&');
   return NULL;
 }
 
