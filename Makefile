@@ -1,6 +1,6 @@
 PROF ?= -fprofile-arcs -ftest-coverage -g
-CFLAGS ?= -std=c99 -g -O0 -W -Wall -pedantic $(CFLAGS_EXTRA)
-CXXFLAGS ?= -g -O0 -W -Wall -pedantic $(CFLAGS_EXTRA)
+CFLAGS ?= -std=c99 -g -O0 -W -Wall -Wextra -Werror -fno-builtin -pedantic -lm $(CFLAGS_EXTRA)
+CXXFLAGS ?= -g -O0 -W -Wall -Wextra -Werror -fno-builtin -pedantic -lm $(CFLAGS_EXTRA)
 CLFLAGS ?= /DWIN32_LEAN_AND_MEAN /MD /O2 /TC /W2 /WX
 
 RD ?= docker run --rm -v $(CURDIR):$(CURDIR) -w $(CURDIR)
