@@ -506,6 +506,41 @@ static const char *test_scanf(void) {
   free(d);
 
   {
+      const char* str = "{a:{b:4},c:5}";
+      int b = 0, c=0;
+      ASSERT(json_scanf(str, strlen(str), "{a:{b:%d},c:%d}", &b, &c) == 2);
+      ASSERT(b == 4);
+      ASSERT(c == 5);
+  }
+  {
+      const char* str = "{a:{b:4},c:\"abc\"}";
+      int b = 0;
+      char* c = NULL;
+      ASSERT(json_scanf(str, strlen(str), "{a:{b:%d},c:%Q}", &b, &c) == 2);
+      ASSERT(b == 4);
+      ASSERT(strcmp(c, "abc") == 0);
+      free(c);
+  }
+  {
+      const char* str = "{a:{b:{c:4}},d:\"abc\"}";
+      int c = 0;
+      char* d = NULL;
+      ASSERT(json_scanf(str, strlen(str), "{a:{b:{c:%d}},d:%Q}", &c, &d) == 2);
+      ASSERT(c == 4);
+      ASSERT(strcmp(d, "abc") == 0);
+      free(d);
+  }
+  {
+      const char* str = "{a:{b:{c:4},d:5},e:\"abc\"}";
+      int c=0,d = 0;
+      char* e = NULL;
+      ASSERT(json_scanf(str, strlen(str), "{a:{b:{c:%d},d:%d},e:%Q}", &c, &d, &e) == 3);
+      ASSERT(c == 4);
+      ASSERT(d == 5);
+      ASSERT(strcmp(e, "abc") == 0);
+      free(e);
+  }
+  {
     /* Test errors */
     const char *str = "{foo:1, bar:[2,3,4]}";
     size_t i;
