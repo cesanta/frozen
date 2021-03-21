@@ -138,6 +138,16 @@ static const char *test_errors(void) {
   ASSERT(json_walk("{}", 2, NULL, NULL) == 2);
   ASSERT(json_walk(s1, strlen(s1), NULL, 0) > 0);
 
+  {
+    const char *sl = "{ a: [[[[[[[[";
+    struct frozen_args args[1];
+
+    INIT_FROZEN_ARGS(args);
+    args->limit = 10;
+
+    ASSERT(json_walk_args(sl, strlen(sl), args) == JSON_DEPTH_LIMIT);
+    ASSERT(json_walk_args(sl, strlen(sl) - 1, args) == JSON_STRING_INCOMPLETE);
+  }
   return NULL;
 }
 

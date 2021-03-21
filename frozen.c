@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #if !defined(WEAK)
 #if (defined(__GNUC__) || defined(__TI_COMPILER_VERSION__)) && !defined(_WIN32)
@@ -78,6 +79,7 @@ struct frozen {
 
   const char *cur_name;
   size_t cur_name_len;
+  int limit;
 
   /* For callback API */
   char path[JSON_MAX_PATH_LEN];
@@ -339,6 +341,9 @@ static int json_expect(struct frozen *f, const char *s, int len,
 static int json_parse_value(struct frozen *f) {
   int ch = json_cur(f);
 
+  if (--f->limit <= 0)
+    return JSON_DEPTH_LIMIT;
+
   switch (ch) {
     case '"':
       TRY(json_parse_string(f));
@@ -377,6 +382,7 @@ static int json_parse_value(struct frozen *f) {
       return ch == END_OF_STRING ? JSON_STRING_INCOMPLETE : JSON_STRING_INVALID;
   }
 
+  f->limit++;
   return 0;
 }
 
@@ -806,17 +812,44 @@ int json_walk(const char *json_string, int json_string_length,
               json_walk_callback_t callback, void *callback_data) WEAK;
 int json_walk(const char *json_string, int json_string_length,
               json_walk_callback_t callback, void *callback_data) {
-  struct frozen frozen;
 
-  memset(&frozen, 0, sizeof(frozen));
-  frozen.end = json_string + json_string_length;
-  frozen.cur = json_string;
-  frozen.callback_data = callback_data;
-  frozen.callback = callback;
+  if (callback == NULL)
+    return (json_walk_args(json_string, json_string_length, NULL));
 
-  TRY(json_doit(&frozen));
+  struct frozen_args args[1];
 
-  return frozen.cur - json_string;
+  INIT_FROZEN_ARGS(args);
+  args->callback = callback;
+  args->callback_data = callback_data;
+
+  return (json_walk_args(json_string, json_string_length, args));
+}
+
+int json_walk_args(const char *json_string, int json_string_length,
+		   const struct frozen_args *args) WEAK;
+
+int json_walk_args(const char *json_string, int json_string_length,
+		   const struct frozen_args *args)
+{
+  struct frozen frozen[1];
+
+  memset(frozen, 0, sizeof(*frozen));
+  frozen->end = json_string + json_string_length;
+  frozen->cur = json_string;
+
+  if (args == NULL) {
+    frozen->limit = INT_MAX;
+  } else {
+    frozen->callback = args->callback;
+    frozen->callback_data = args->callback_data;
+    frozen->limit = args->limit;
+  }
+
+  TRY(json_doit(frozen));
+
+  assert(frozen->limit == (args ? args->limit : INT_MAX));
+
+  return (frozen->cur - json_string);
 }
 
 struct scan_array_info {
