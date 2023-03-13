@@ -242,6 +242,7 @@ static int json_parse_string(struct frozen *f) {
       EXPECT(ch >= 32 && len > 0, JSON_STRING_INVALID); /* No control chars */
       EXPECT(len <= json_left(f), JSON_STRING_INCOMPLETE);
       if (ch == '\\') {
+        EXPECT(f->cur + 1 < f->end, JSON_STRING_INVALID);
         EXPECT((n = json_get_escape_len(f->cur + 1, json_left(f))) > 0, n);
         len += n;
       } else if (ch == '"') {
