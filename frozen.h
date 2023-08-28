@@ -26,6 +26,7 @@ extern "C" {
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <limits.h>
 
 #if defined(_WIN32) && _MSC_VER < 1700
 typedef int bool;
@@ -66,6 +67,7 @@ struct json_token {
 /* Error codes */
 #define JSON_STRING_INVALID -1
 #define JSON_STRING_INCOMPLETE -2
+#define JSON_DEPTH_LIMIT -3
 
 /*
  * Callback-based SAX-like API.
@@ -104,6 +106,24 @@ typedef void (*json_walk_callback_t)(void *callback_data, const char *name,
  */
 int json_walk(const char *json_string, int json_string_length,
               json_walk_callback_t callback, void *callback_data);
+
+/*
+ * Extensible argument passing interface
+ */
+
+struct frozen_args {
+  json_walk_callback_t callback;
+  void *callback_data;
+  int limit;
+};
+
+int json_walk_args(const char *json_string, int json_string_length,
+		   const struct frozen_args *args);
+
+#define INIT_FROZEN_ARGS(ptr) do {			\
+		memset((ptr), 0, sizeof(*(ptr)));	\
+		(ptr)->limit = INT_MAX;		\
+	} while(0)
 
 /*
  * JSON generation API.
