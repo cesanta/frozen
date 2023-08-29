@@ -1,0 +1,11 @@
+
+# build artifacts from use as a submodule with autotools
+.deps
+.dirstamp
+.libs
+frozen.lo
+frozen.o
+
+# build artifacts from make
+unit_test*
+frozen.c.gcov
