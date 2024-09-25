@@ -1079,6 +1079,22 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
     } else if (fmt[i] == '}') {
       if ((p = strrchr(path, '.')) != NULL) *p = '\0';
       i++;
+    } else if (fmt[i] == '[') {
+      strcat(path, "[0]");
+      i++;
+    } else if (fmt[i] == ',' && path[strlen(path)-1] == ']' ) {
+      int idx;
+      p = strrchr(path, '[');
+      if(p != NULL){
+          path[strlen(path)-1] = '\0';
+          *p = '\0';
+          idx = atoi(p+1);
+          snprintf(p, sizeof(path)-(p - path), "[%d]", idx+1);
+      }
+      i++;
+    } else if (fmt[i] == ']') {
+      if ((p = strrchr(path, '[')) != NULL) *p = '\0';
+      i++;
     } else if (fmt[i] == '%') {
       info.target = va_arg(ap, void *);
       info.type = fmt[i + 1];
@@ -1099,8 +1115,6 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
           memcpy(fmtbuf, fmt + i, conv_len);
           fmtbuf[conv_len] = '\0';
           i += conv_len;
-          if (fmt[i] != '}')
-            i += strspn(fmt + i, delims);
           break;
         }
       }

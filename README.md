@@ -62,6 +62,22 @@ Scans the JSON string `str`, performing scanf-like conversions according to `fmt
 Returns the number of elements successfully scanned & converted.
 Negative number means scan error.
 
+Example - parse fixed size array of objects:
+
+```c
+  // str has the following JSON string (notice keys are out of order):
+  // { "a": 123, "d": true, "b": [1, 2], "c": "hi",
+  //   "e": [ {"b": 123}, {"b": 345} ] }
+  // This example shows how to iterate over fixed size array, and parse each object.
+
+  int a = 0, d = 0;
+  char *c = NULL;
+  void *my_data = NULL;
+  json_scanf(str, strlen(str), "{ a:%d, b:[%B, %B], c:%Q, d:%B, e:[{b: %d},{b: %d}]}",
+             &a, scan_array, my_data, &c, &d);
+  }
+```
+
 Example - scan arbitrary JSON string:
 
 ```c
