@@ -67,15 +67,18 @@ Example - parse fixed size array of objects:
 ```c
   // str has the following JSON string (notice keys are out of order):
   // { "a": 123, "d": true, "b": [1, 2], "c": "hi",
-  //   "e": [ {"b": 123}, {"b": 345} ] }
+  //   "e": [ {"k": 123}, {"k": 345} ] }
   // This example shows how to iterate over fixed size array, and parse each object.
 
-  int a = 0, d = 0;
+  int a = 0, b1 = 0, b2 = 0, d = 0, k1 = 0, k2 = 0;
   char *c = NULL;
   void *my_data = NULL;
-  json_scanf(str, strlen(str), "{ a:%d, b:[%B, %B], c:%Q, d:%B, e:[{b: %d},{b: %d}]}",
-             &a, scan_array, my_data, &c, &d);
+  json_scanf(str, strlen(str), "{ a:%d, b:[%B, %B], c:%Q, d:%B, e:[{k: %d},{k: %d}]}",
+             &a, &b1, &b2, &c, &d, &k1, &k2);
   }
+
+  // Free string allocated by %Q format specifier
+  free(c)
 ```
 
 Example - scan arbitrary JSON string:
