@@ -1077,6 +1077,21 @@ static const char *test_json_printf_base64(void) {
   return NULL;
 }
 
+static const char *test_json_depth(void) {
+  char out_buf[100] = {0};
+  struct json_out out = JSON_OUT_BUF(out_buf, sizeof(out_buf));
+  char *s = (char*) calloc(500001, 1);
+
+  int i = 0;
+  for (i = 0; i <= 500000; i++) {
+      s[i] = '[';
+  }
+
+  ASSERT(json_prettify(s, 500000, &out) == JSON_DEPTH_LIMIT);
+  free(s);
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_json_printf_hex);
   RUN_TEST(test_json_printf_base64);
@@ -1093,6 +1108,7 @@ static const char *run_all_tests(void) {
   RUN_TEST(test_parse_string);
   RUN_TEST(test_fprintf);
   RUN_TEST(test_json_setf);
+  RUN_TEST(test_json_depth);
   return NULL;
 }
 
