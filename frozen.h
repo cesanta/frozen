@@ -122,7 +122,7 @@ int json_walk_args(const char *json_string, int json_string_length,
 
 #define INIT_FROZEN_ARGS(ptr) do {			\
 		memset((ptr), 0, sizeof(*(ptr)));	\
-		(ptr)->limit = INT_MAX;		\
+		(ptr)->limit = JSON_MAX_DEPTH;		\
 	} while(0)
 
 /*
@@ -328,6 +328,10 @@ void *json_next_elem(const char *s, int len, void *handle, const char *path,
 
 #ifndef JSON_MAX_PATH_LEN
 #define JSON_MAX_PATH_LEN 256
+#endif
+
+#ifndef JSON_MAX_DEPTH
+#define JSON_MAX_DEPTH 9000
 #endif
 
 #ifndef JSON_MINIMAL
