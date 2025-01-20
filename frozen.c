@@ -1409,12 +1409,14 @@ struct next_data {
 
 static void next_set_key(struct next_data *d, const char *name, int name_len,
                          int is_array) {
+  if (name == NULL || name_len < 0) return;
   if (is_array) {
     /* Array. Set index and reset key  */
     if (d->key != NULL) {
       d->key->len = 0;
       d->key->ptr = NULL;
     }
+
     if (d->idx != NULL) *d->idx = atoi(name);
   } else {
     /* Object. Set key and make index -1 */
