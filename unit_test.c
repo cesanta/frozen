@@ -501,12 +501,12 @@ static void scan_array(const char *str, int len, void *user_data) {
 
 static const char *test_scanf(void) {
   char buf[100] = "";
-  int a = 0, b = 0;
+  int a = 0, b = 0, e = 0, f = 0, g = 0;
   char *d = NULL;
   const char *str =
       "{ a: 1234, b : true, \"c\": {x: [17, 78, -20]}, d: \"hi%20there\" }";
 
-  ASSERT(json_scanf(str, strlen(str), "{a: %d, b: %B, c: [%M], d: %Q}", &a, &b,
+  ASSERT(json_scanf(str, strlen(str), "{a: %d, b: %B, c: %M, d: %Q}", &a, &b,
                     &scan_array, buf, &d) == 4);
   ASSERT(a == 1234);
   ASSERT(b == 1);
@@ -514,6 +514,18 @@ static const char *test_scanf(void) {
   ASSERT(d != NULL);
   ASSERT(strcmp(d, "hi%20there") == 0);
   free(d);
+
+  ASSERT(json_scanf(str, strlen(str), "{a: %d, b: %B, c:{ x: [%d, %d, %d]}, d: %Q}", &a, &b,
+                    &e, &f, &g, &d) == 6);
+  ASSERT(a == 1234);
+  ASSERT(b == 1);
+  ASSERT(e == 17);
+  ASSERT(f == 78);
+  ASSERT(g == -20);
+  ASSERT(d != NULL);
+  ASSERT(strcmp(d, "hi%20there") == 0);
+  free(d);
+
 
   {
       const char* str = "{a:{b:4},c:5}";
