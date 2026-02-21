@@ -1196,24 +1196,46 @@ static void json_vsetf_cb(void *userdata, const char *name, size_t name_len,
                           const char *path, const struct json_token *t) {
   struct json_setf_data *data = (struct json_setf_data *) userdata;
   int off, len = get_matched_prefix_len(path, data->json_path);
+  int matched = 0;
   if (t->ptr == NULL) return;
   off = t->ptr - data->base;
-  if (len > data->matched) data->matched = len;
+  // only check matched later on if deliminator or end are found
+  if (len > data->matched &&
+      (data->json_path[len] == '.' || data->json_path[len] == '\0')) {
+    matched = len;
+  }
 
   /*
-   * If there is no exact path match, set the mutation position to tbe end
+   * If there is no exact path match, set the mutation position to be end
    * of the object or array
    */
-  if (len < data->matched && data->pos == 0 &&
-      (t->type == JSON_TYPE_OBJECT_END || t->type == JSON_TYPE_ARRAY_END)) {
-    data->pos = data->end = data->prev;
+  if (matched > data->matched && data->pos == 0 &&
+      (t->type == JSON_TYPE_OBJECT_END || t->type == JSON_TYPE_ARRAY_END))
+  { 
+    // only save off matched value if it is a new and larger match
+    data->matched = matched;
+    // account for a the previous item being a string
+    if (data->base[data->prev] == '"') {
+      data->pos = data->end = data->prev + 1;
+    }
+    else {
+      data->pos = data->end = data->prev;
+    }
   }
 
   /* Exact path match. Set mutation position to the value of this token */
   if (strcmp(path, data->json_path) == 0 && t->type != JSON_TYPE_OBJECT_START &&
       t->type != JSON_TYPE_ARRAY_START) {
-    data->pos = off;
-    data->end = off + t->len;
+    // need to set pos and end differently to account for '"' around string
+    if (t->type == JSON_TYPE_TRUE || t->type == JSON_TYPE_FALSE || t->type == JSON_TYPE_NUMBER) {
+      data->pos = off;
+      data->end = off + t->len + 1;
+    }
+    else {
+      data->pos = off - 1;
+      data->end = off + t->len + 2;
+    }
+    data->matched = matched;
   }
 
   /*
@@ -1256,14 +1278,30 @@ int json_vsetf(const char *s, int len, struct json_out *out,
     json_printf(out, "%.*s", len - data.end, s + data.end);
   } else {
     /* Modification codepath */
-    int n, off = data.matched, depth = 0;
+    int n, off = data.matched+1, depth = 0;
+    bool empty_base = false;
+
+    // if a partial or exact match isn't found, adjust a few items
+    if (data.matched == 0 && data.pos == 0) {
+      data.pos = data.prev - 1;
+      data.end--;
+
+      // a completely empty base requres additional correction
+      if (data.base[0] == '{' && data.base[1] == '}') {
+        empty_base = true;
+        data.pos = 1;
+        data.prev = 1;
+        data.end = 1;
+      }
+    }
 
     /* Print the unchanged beginning */
     json_printf(out, "%.*s", data.pos, s);
 
     /* Add missing keys */
     while ((n = strcspn(&json_path[off], ".[")) > 0) {
-      if (s[data.prev - 1] != '{' && s[data.prev - 1] != '[' && depth == 0) {
+      // don't add a comma if it is a completely empty base
+      if (s[data.prev - 1] != '{' && s[data.prev - 1] != '[' && depth == 0 && !empty_base) {
         json_printf(out, ",");
       }
       if (off > 0 && json_path[off - 1] != '.') break;
